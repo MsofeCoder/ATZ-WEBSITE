@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #1B2A4A;
+  --navy-deep: #0E1730;
+  --gold: #C9A84C;
+  --gold-soft: #E4CE8F;
+  --white: #F8F9FA;
+  --slate: #4A4A4A;
+  --slate-light: #8992A3;
+  --md-a: #6A0DAD; --md-b: #E91E8C;
+  --ai-a: #00BCD4; --ai-b: #0A2540;
+  --mc-a: #1B5E20; --mc-b: #69F0AE;
+}
+
+@theme inline {
+  --color-navy: var(--navy);
+  --color-navy-deep: var(--navy-deep);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-cream: var(--white);
+  --color-slate-ink: var(--slate);
+  --color-slate-light: var(--slate-light);
+  --color-md-a: var(--md-a);
+  --color-md-b: var(--md-b);
+  --color-ai-a: var(--ai-a);
+  --color-ai-b: var(--ai-b);
+  --color-mc-a: var(--mc-a);
+  --color-mc-b: var(--mc-b);
+  --font-display: var(--font-montserrat), sans-serif;
+  --font-body: var(--font-open-sans), sans-serif;
+  --font-serif-accent: var(--font-playfair), serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--white);
+  color: var(--navy);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+*:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
