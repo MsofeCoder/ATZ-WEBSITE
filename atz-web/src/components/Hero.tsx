@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import gsap from "gsap";
 import type { Dict } from "@/dictionaries";
 import ConstellationCanvas from "./ConstellationCanvas";
 import HeroVisual from "./HeroVisual";
@@ -8,14 +9,45 @@ import CountUp from "./CountUp";
 import ConsultationModal from "./ConsultationModal";
 import { WA } from "./Header";
 
+// Register ScrollToPlugin once (safe to call repeatedly)
+let scrollToRegistered = false;
+async function ensureScrollTo() {
+  if (scrollToRegistered) return;
+  const [{ ScrollToPlugin }, { ScrollTrigger }] = await Promise.all([
+    import("gsap/ScrollToPlugin"),
+    import("gsap/ScrollTrigger"),
+  ]);
+  gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
+  scrollToRegistered = true;
+}
+
+type Brand = "md" | "ai" | "mc";
+
 const SATELLITES = [
   { label: "MD", cls: "sat-md", ring: 3, delay: "0s" },
   { label: "AI", cls: "sat-ai", ring: 2, delay: ".9s" },
   { label: "MC", cls: "sat-mc", ring: 1, delay: "1.7s" },
 ];
 
-export default function Hero({ dict }: { dict: Dict }) {
+export default function Hero({ dict, onActiveCardChange }: { dict: Dict; onActiveCardChange?: (id: Brand) => void }) {
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Satellite click → GSAP smooth scroll to #ecosystem, then open the matching card
+  const handleSatelliteSelect = useCallback(
+    (id: Brand) => {
+      ensureScrollTo().then(() => {
+        gsap.to(window, {
+          scrollTo: { y: "#ecosystem", offsetY: 80 },
+          duration: 1.2,
+          ease: "power3.inOut",
+          onComplete: () => {
+            onActiveCardChange?.(id);
+          },
+        });
+      });
+    },
+    [onActiveCardChange]
+  );
 
   return (
     <section className="relative overflow-hidden bg-navy-deep py-24 text-white md:pt-[120px]">
@@ -70,7 +102,7 @@ export default function Hero({ dict }: { dict: Dict }) {
 
           {/* Hero visual: WebGL orbit scene, canvas/CSS fallbacks */}
           <div className="mx-auto max-lg:hidden" aria-hidden="true">
-            <HeroVisual />
+            <HeroVisual onSelect={handleSatelliteSelect} />
           </div>
         </div>
 

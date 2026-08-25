@@ -8,7 +8,7 @@ const OrbitScene = dynamic(() => import("./OrbitScene"), {
   loading: () => null,
 });
 
-export default function HeroVisual() {
+export default function HeroVisual({ onSelect }: { onSelect?: (id: "md" | "ai" | "mc") => void }) {
   const [mode, setMode] = useState<"checking" | "webgl" | "canvas" | "none">("checking");
   const [failed, setFailed] = useState(false);
 
@@ -34,7 +34,7 @@ export default function HeroVisual() {
     return (
       <ErrorBoundary fallback={<CssOrbit />} onFail={() => setFailed(true)}>
         <div className="relative mx-auto aspect-square w-full max-w-[420px]">
-          <OrbitScene />
+          <OrbitScene onSelect={onSelect} />
         </div>
       </ErrorBoundary>
     );

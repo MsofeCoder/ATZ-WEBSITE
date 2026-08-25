@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Dict } from "@/dictionaries";
 import Hero from "@/components/Hero";
 import HtmlLang from "@/components/HtmlLang";
@@ -10,14 +11,19 @@ import CtaBand from "@/components/CtaBand";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
+type Brand = "md" | "ai" | "mc";
+
 export default function HomePage({ dict, lang }: { dict: Dict; lang: "en" | "sw" }) {
+  // Shared state: satellite click in the hero opens the matching company card
+  const [activeCard, setActiveCard] = useState<Brand | null>(null);
+
   return (
     <>
       <HtmlLang lang={lang} />
       <Header dict={dict} lang={lang} />
       <main>
-        <Hero dict={dict} />
-        <Ecosystem dict={dict} />
+        <Hero dict={dict} onActiveCardChange={(id) => setActiveCard(id)} />
+        <Ecosystem dict={dict} activeCard={activeCard} />
         <Testimonials dict={dict} />
         <FounderQuoteAndValues dict={dict} lang={lang} />
         {/* CTA band with its own modal opener */}
@@ -40,7 +46,6 @@ export default function HomePage({ dict, lang }: { dict: Dict; lang: "en" | "sw"
 }
 
 // CtaBand is client; needs modal state at this level
-import { useState } from "react";
 import ConsultationModal from "@/components/ConsultationModal";
 
 function CtaWithModal({ dict }: { dict: Dict }) {

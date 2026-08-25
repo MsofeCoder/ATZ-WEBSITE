@@ -6,8 +6,19 @@ import Reveal from "./Reveal";
 
 type Brand = "md" | "ai" | "mc";
 
-function CompanyCard({ id, dict }: { id: Brand; dict: Dict }) {
+function CompanyCard({
+  id,
+  dict,
+  forceOpen,
+  onUserToggle,
+}: {
+  id: Brand;
+  dict: Dict;
+  forceOpen?: boolean;
+  onUserToggle?: (id: Brand) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const isOpen = forceOpen || open;
   const d = id === "md" ? dict.md : id === "ai" ? dict.aiCo : dict.mc;
   const visitUrl =
     id === "md"
@@ -66,19 +77,22 @@ function CompanyCard({ id, dict }: { id: Brand; dict: Dict }) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17" /></svg>
           </a>
           <button
-            onClick={() => setOpen(!open)}
-            aria-expanded={open}
+            onClick={() => {
+              setOpen(!isOpen);
+              onUserToggle?.(id);
+            }}
+            aria-expanded={isOpen}
             className="inline-flex items-center gap-1.5 rounded-sm px-4 py-2 font-display text-sm font-bold text-white"
             style={{ background: "var(--card-a)" }}
           >
-            <span>{open ? dict.common.close : dict.common.details}</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            <span>{isOpen ? dict.common.close : dict.common.details}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
           </button>
         </div>
       </div>
       <div
         className="overflow-hidden border-t border-navy/[0.08] transition-all duration-500"
-        style={{ maxHeight: open ? 900 : 0 }}
+        style={{ maxHeight: isOpen ? 900 : 0 }}
       >
         <div className="px-7 pb-8 pt-6">
           <h5 className="mb-3 font-display text-xs font-extrabold uppercase tracking-widest" style={{ color: "var(--card-a)" }}>{dict.common.services}</h5>
@@ -106,7 +120,13 @@ function CompanyCard({ id, dict }: { id: Brand; dict: Dict }) {
   );
 }
 
-export default function Ecosystem({ dict }: { dict: Dict }) {
+export default function Ecosystem({
+  dict,
+  activeCard,
+}: {
+  dict: Dict;
+  activeCard?: Brand | null;
+}) {
   return (
     <section id="ecosystem" className="bg-[#F3F4F7] pb-24 pt-[120px]">
       <div className="mx-auto max-w-[1180px] px-8">
@@ -120,7 +140,11 @@ export default function Ecosystem({ dict }: { dict: Dict }) {
         <div className="grid grid-cols-3 gap-6 max-lg:grid-cols-1">
           {(["md", "ai", "mc"] as Brand[]).map((b, i) => (
             <Reveal key={b} delay={i * 160} className="h-full">
-              <CompanyCard id={b} dict={dict} />
+              <CompanyCard
+                id={b}
+                dict={dict}
+                forceOpen={activeCard === b}
+              />
             </Reveal>
           ))}
         </div>

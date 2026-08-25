@@ -94,8 +94,9 @@ function Satellite({
       </mesh>
       <group ref={pivot}>
         <group>
+          {/* Invisible enlarged hit box — bigger tap target for mobile */}
           <mesh
-            ref={meshRef}
+            visible={false}
             onPointerOver={(e: ThreeEvent<PointerEvent>) => {
               e.stopPropagation();
               setHovered(true);
@@ -107,6 +108,10 @@ function Satellite({
               onSelect(sat.id);
             }}
           >
+            <sphereGeometry args={[sat.size * 2.2, 12, 12]} />
+            <meshBasicMaterial />
+          </mesh>
+          <mesh ref={meshRef}>
             <sphereGeometry args={[sat.size, 24, 24]} />
             <meshStandardMaterial
               color={sat.color}
