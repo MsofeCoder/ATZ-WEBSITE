@@ -57,3 +57,50 @@ body {
   outline: 3px solid var(--gold);
   outline-offset: 3px;
 }
+
+/* ------------------------------------------------------------------ */
+/* CSS2D labels (Three.js CSS2DRenderer overlay) — glassmorphism       */
+/* ------------------------------------------------------------------ */
+.css2d-label {
+  pointer-events: none;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 8px;
+  border-radius: 999px;
+  font-family: var(--font-montserrat), sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: #ffffff;
+  background: rgba(12, 18, 34, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease, background 0.25s ease;
+}
+
+.css2d-label.is-active {
+  background: rgba(12, 18, 34, 0.78);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+.css2d-label__logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #ffffff22;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+/* Optional interactive tag inside a label — gets pointer events */
+.css2d-link {
+  pointer-events: auto;
+  cursor: pointer;
+}

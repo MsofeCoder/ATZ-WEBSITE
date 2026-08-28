@@ -2,7 +2,7 @@ import type { Dict, Lang } from "@/dictionaries";
 import { getDictionary } from "@/dictionaries";
 import Reveal from "@/components/Reveal";
 
-export function FounderQuoteAndValues({ dict, lang }: { dict: Dict; lang: Lang }) {
+export function FounderQuoteAndValues({ dict }: { dict: Dict; lang: Lang }) {
   const values = [
     { l: "A.", h: dict.values.v1h, p: dict.values.v1p },
     { l: "T.", h: dict.values.v2h, p: dict.values.v2p },

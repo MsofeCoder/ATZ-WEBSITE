@@ -1,31 +1,40 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { Dict, Lang } from "@/dictionaries";
 import ConsultationModal from "./ConsultationModal";
 
-const WA = "https://wa.me/255794557333";
-
 export default function Header({ dict, lang }: { dict: Dict; lang: Lang }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const pathname = usePathname() ?? "/";
 
   const links = [
     { href: "/#ecosystem", label: dict.nav.companies },
     { href: "/#testimonials", label: dict.nav.testimonials },
     { href: "/#about", label: dict.nav.about },
     { href: "/#values", label: dict.nav.values },
+    { href: "/contact", label: dict.footer.contact },
   ];
-  const otherLang = lang === "en" ? "sw" : "en";
+
+  // Context-aware language toggle — preserves the current page
+  const getLangHref = (target: Lang) => {
+    if (target === lang) return pathname;
+    if (target === "sw") {
+      return pathname.startsWith("/sw") ? pathname : pathname === "/" ? "/sw" : `/sw${pathname}`;
+    }
+    return pathname.startsWith("/sw") ? pathname.slice(3) || "/" : pathname;
+  };
 
   return (
     <>
       <header className="sticky top-0 z-60 border-b border-navy/[0.08] bg-cream/90 backdrop-blur-md">
         <nav className="mx-auto flex max-w-[1180px] items-center justify-between px-8 py-3.5">
-          <Link href="/" className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/ATZ_LOGO.png" alt="ATZ Company Limited" className="h-[38px] w-[38px]" />
+          <Link href={lang === "sw" ? "/sw" : "/"} className="flex items-center gap-3">
+            <Image src="/ATZ_LOGO.png" alt="ATZ Company Limited" width={38} height={38} className="h-[38px] w-[38px]" />
             <div className="font-display text-[1.02rem] font-extrabold text-navy">
               ATZ <span className="text-gold">COMPANY LIMITED</span>
             </div>
@@ -38,8 +47,8 @@ export default function Header({ dict, lang }: { dict: Dict; lang: Lang }) {
               </Link>
             ))}
             <div className="inline-flex overflow-hidden rounded-full border border-navy/20" role="group" aria-label="Language / Lugha">
-              <Link href="/" aria-pressed={lang === "en"} className={`px-3 py-1.5 font-display text-xs font-bold tracking-wider ${lang === "en" ? "bg-navy text-white" : "text-navy hover:bg-navy/5"}`}>EN</Link>
-              <Link href="/sw" aria-pressed={lang === "sw"} className={`px-3 py-1.5 font-display text-xs font-bold tracking-wider ${lang === "sw" ? "bg-navy text-white" : "text-navy hover:bg-navy/5"}`}>SW</Link>
+              <Link href={getLangHref("en")} aria-pressed={lang === "en"} className={`px-3 py-1.5 font-display text-xs font-bold tracking-wider ${lang === "en" ? "bg-navy text-white" : "text-navy hover:bg-navy/5"}`}>EN</Link>
+              <Link href={getLangHref("sw")} aria-pressed={lang === "sw"} className={`px-3 py-1.5 font-display text-xs font-bold tracking-wider ${lang === "sw" ? "bg-navy text-white" : "text-navy hover:bg-navy/5"}`}>SW</Link>
             </div>
             <button onClick={() => setModalOpen(true)} className="rounded-sm bg-navy px-5 py-2.5 font-display text-sm font-bold text-white transition hover:bg-gold hover:text-navy-deep">
               {dict.nav.cta}
@@ -72,8 +81,8 @@ export default function Header({ dict, lang }: { dict: Dict; lang: Lang }) {
           ))}
           <div className="mt-4 flex items-center justify-between gap-3">
             <div className="inline-flex overflow-hidden rounded-full border border-navy/20" role="group" aria-label="Language / Lugha">
-              <Link href="/" onClick={() => setMenuOpen(false)} className={`px-3 py-1.5 font-display text-xs font-bold ${lang === "en" ? "bg-navy text-white" : "text-navy"}`}>EN</Link>
-              <Link href="/sw" onClick={() => setMenuOpen(false)} className={`px-3 py-1.5 font-display text-xs font-bold ${lang === "sw" ? "bg-navy text-white" : "text-navy"}`}>SW</Link>
+              <Link href={getLangHref("en")} onClick={() => setMenuOpen(false)} className={`px-3 py-1.5 font-display text-xs font-bold ${lang === "en" ? "bg-navy text-white" : "text-navy"}`}>EN</Link>
+              <Link href={getLangHref("sw")} onClick={() => setMenuOpen(false)} className={`px-3 py-1.5 font-display text-xs font-bold ${lang === "sw" ? "bg-navy text-white" : "text-navy"}`}>SW</Link>
             </div>
             <button onClick={() => { setMenuOpen(false); setModalOpen(true); }} className="flex-1 rounded-sm bg-navy px-5 py-2.5 text-center font-display text-sm font-bold text-white transition hover:bg-gold hover:text-navy-deep">
               {dict.nav.cta}
@@ -86,5 +95,3 @@ export default function Header({ dict, lang }: { dict: Dict; lang: Lang }) {
     </>
   );
 }
-
-export { WA };

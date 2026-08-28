@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Dict } from "@/dictionaries";
+import { WA_URL } from "@/lib/site";
 import Hero from "@/components/Hero";
 import HtmlLang from "@/components/HtmlLang";
 import Ecosystem from "@/components/Ecosystem";
@@ -33,9 +34,9 @@ export default function HomePage({ dict, lang }: { dict: Dict; lang: "en" | "sw"
 
       {/* WhatsApp floating action button */}
       <a
-        href="https://wa.me/255794557333"
+        href={WA_URL}
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"
         className="fixed bottom-6 right-6 z-50 flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#25D366] text-navy-deep shadow-xl transition hover:scale-105 hover:shadow-2xl"
       >

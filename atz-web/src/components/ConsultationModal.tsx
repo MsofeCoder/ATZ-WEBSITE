@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Dict } from "@/dictionaries";
-
-const WA = "https://wa.me/255794557333";
+import { WA_URL as WA } from "@/lib/site";
+import { isValidEmail } from "@/lib/validation";
 const WHATSAPP_ICON = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.7-1.4-1.6-1.6-1.9-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5 0-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.5 1.1 2.7c.1.2 2 3 4.7 4.2.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.5-.3z" />
@@ -30,11 +30,14 @@ export default function ConsultationModal({
   useEffect(() => {
     if (open) {
       lastFocused.current = document.activeElement as HTMLElement;
-      setStatus({ kind: "idle" });
-      setSuccess(false);
       document.body.style.overflow = "hidden";
       const first = modalRef.current?.querySelector("input, select, textarea, button");
       setTimeout(() => (first as HTMLElement)?.focus(), 40);
+      // Reset state using requestAnimationFrame to avoid cascading renders
+      requestAnimationFrame(() => {
+        setStatus({ kind: "idle" });
+        setSuccess(false);
+      });
     } else {
       document.body.style.overflow = "";
       lastFocused.current?.focus();
@@ -69,7 +72,7 @@ export default function ConsultationModal({
 
     const name = String(fd.get("name") ?? "").trim();
     const email = String(fd.get("email") ?? "").trim();
-    if (!name || !email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    if (!name || !email || !isValidEmail(email)) {
       setStatus({ kind: "error", msg: dict.modal.errRequired });
       return;
     }
@@ -195,7 +198,7 @@ export default function ConsultationModal({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mx-auto mb-4 h-12 w-12 text-gold" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
             <h4 className="font-display text-xl font-extrabold text-navy">{dict.modal.successTitle}</h4>
             <p className="mt-2 text-sm text-slate-ink">{dict.modal.successBody}</p>
-            <a href={WA} target="_blank" rel="noopener" className="mt-5 inline-flex items-center gap-2 rounded-sm bg-[#25D366] px-5 py-3 font-display text-sm font-bold text-navy-deep transition hover:-translate-y-0.5">
+            <a href={WA} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-sm bg-[#25D366] px-5 py-3 font-display text-sm font-bold text-navy-deep transition hover:-translate-y-0.5">
               {WHATSAPP_ICON} WhatsApp
             </a>
           </div>

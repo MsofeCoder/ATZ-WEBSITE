@@ -4,12 +4,11 @@ import { useState, useCallback } from "react";
 import gsap from "gsap";
 import type { Dict } from "@/dictionaries";
 import ConstellationCanvas from "./ConstellationCanvas";
-import HeroVisual from "./HeroVisual";
+import SolarSystemHero from "./SolarSystemHero";
 import CountUp from "./CountUp";
 import ConsultationModal from "./ConsultationModal";
-import { WA } from "./Header";
+import { WA_URL as WA } from "@/lib/site";
 
-// Register ScrollToPlugin once (safe to call repeatedly)
 let scrollToRegistered = false;
 async function ensureScrollTo() {
   if (scrollToRegistered) return;
@@ -23,22 +22,16 @@ async function ensureScrollTo() {
 
 type Brand = "md" | "ai" | "mc";
 
-const SATELLITES = [
-  { label: "MD", cls: "sat-md", ring: 3, delay: "0s" },
-  { label: "AI", cls: "sat-ai", ring: 2, delay: ".9s" },
-  { label: "MC", cls: "sat-mc", ring: 1, delay: "1.7s" },
-];
-
 export default function Hero({ dict, onActiveCardChange }: { dict: Dict; onActiveCardChange?: (id: Brand) => void }) {
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Satellite click → GSAP smooth scroll to #ecosystem, then open the matching card
   const handleSatelliteSelect = useCallback(
     (id: Brand) => {
       ensureScrollTo().then(() => {
         gsap.to(window, {
           scrollTo: { y: "#ecosystem", offsetY: 80 },
           duration: 1.2,
+          delay: 0.3,
           ease: "power3.inOut",
           onComplete: () => {
             onActiveCardChange?.(id);
@@ -91,18 +84,17 @@ export default function Hero({ dict, onActiveCardChange }: { dict: Dict; onActiv
               <a
                 href={WA}
                 target="_blank"
-                rel="noopener"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2.5 rounded-sm border border-white/20 bg-[#1F3A2E] px-6 py-4 font-display text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#25D366] hover:text-navy-deep"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.7-1.4-1.6-1.6-1.9-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5 0-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.5 1.1 2.7c.1.2 2 3 4.7 4.2.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.5-.3z"/><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.7-1.4-1.6-1.6-1.9-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5 0-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.5 1.1 2.7c.1.2 2 3 4.7 4.2.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.5-.3z" /><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z" /></svg>
                 {dict.hero.whatsapp}
               </a>
             </div>
           </div>
 
-          {/* Hero visual: WebGL orbit scene, canvas/CSS fallbacks */}
-          <div className="mx-auto max-lg:hidden" aria-hidden="true">
-            <HeroVisual onSelect={handleSatelliteSelect} />
+          <div className="mx-auto w-full max-w-[480px] lg:max-w-none">
+            <SolarSystemHero dict={dict} onSelect={handleSatelliteSelect} />
           </div>
         </div>
 
@@ -133,48 +125,8 @@ export default function Hero({ dict, onActiveCardChange }: { dict: Dict; onActiv
         @keyframes riseIn {
           to { opacity: 1; transform: translateY(0); }
         }
-        .orbit-ring {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          border-radius: 50%;
-          border: 1px dashed rgba(248, 249, 250, 0.14);
-        }
-        .ring-1 { width: 190px; height: 190px; animation: orbitSpin 26s linear infinite; }
-        .ring-2 { width: 280px; height: 280px; animation: orbitSpin 40s linear infinite reverse; }
-        .ring-3 { width: 355px; height: 355px; animation: orbitSpin 58s linear infinite; }
-        @keyframes orbitSpin {
-          to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        .satellite {
-          position: absolute;
-          top: -17px;
-          left: calc(50% - 17px);
-          width: 34px;
-          height: 34px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: var(--font-montserrat), sans-serif;
-          font-weight: 800;
-          font-size: 0.62rem;
-          letter-spacing: 0.04em;
-          color: #fff;
-        }
-        .sat-md { background: linear-gradient(135deg, #6A0DAD, #E91E8C); box-shadow: 0 0 18px rgba(233,30,140,0.5); }
-        .sat-ai { background: linear-gradient(135deg, #0A2540, #00BCD4); box-shadow: 0 0 18px rgba(0,188,212,0.5); }
-        .sat-mc { background: linear-gradient(135deg, #1B5E20, #69F0AE); box-shadow: 0 0 18px rgba(105,240,174,0.45); color: #0E1730; }
-        .pulse { animation: satPulse 3.2s ease-in-out infinite; }
-        @keyframes satPulse {
-          0%, 100% { scale: 1; }
-          50% { scale: 1.12; }
-        }
         @media (prefers-reduced-motion: reduce) {
           .rise { opacity: 1; transform: none; animation: none; }
-          .orbit-ring { animation: none !important; }
-          .pulse { animation: none !important; }
         }
       `}</style>
     </section>

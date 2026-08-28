@@ -72,7 +72,7 @@ function CompanyCard({
           ))}
         </div>
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2.5 pt-1.5">
-          <a href={visitUrl} target="_blank" rel="noopener" className="inline-flex items-center gap-2 font-display text-sm font-bold text-navy group">
+          <a href={visitUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 font-display text-sm font-bold text-navy group">
             {visitLabel}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17" /></svg>
           </a>

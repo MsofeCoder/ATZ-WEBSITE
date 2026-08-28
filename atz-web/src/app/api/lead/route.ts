@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { EMAIL_RE } from "@/lib/validation";
 
 // Simple in-memory rate limit (per instance). Swap for Upstash Redis in multi-instance prod.
 const hits = new Map<string, { count: number; reset: number }>();
@@ -7,6 +8,12 @@ const MAX_PER_WINDOW = 5;
 
 function rateLimited(ip: string): boolean {
   const now = Date.now();
+  // Prune expired entries so the map cannot grow unbounded
+  if (hits.size > 0) {
+    for (const [key, rec] of hits) {
+      if (now > rec.reset) hits.delete(key);
+    }
+  }
   const rec = hits.get(ip);
   if (!rec || now > rec.reset) {
     hits.set(ip, { count: 1, reset: now + WINDOW_MS });
@@ -15,8 +22,6 @@ function rateLimited(ip: string): boolean {
   rec.count += 1;
   return rec.count > MAX_PER_WINDOW;
 }
-
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
@@ -64,8 +69,10 @@ export async function POST(req: Request) {
   const resendKey = process.env.RESEND_API_KEY;
   const notifyEmail = process.env.LEAD_NOTIFY_EMAIL ?? "info@atzcompany.co.tz";
   const failures: string[] = [];
+  let attempted = 0;
 
   if (webhook) {
+    attempted++;
     try {
       const res = await fetch(webhook, {
         method: "POST",
@@ -79,6 +86,7 @@ export async function POST(req: Request) {
   }
 
   if (resendKey) {
+    attempted++;
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -103,11 +111,15 @@ export async function POST(req: Request) {
     }
   }
 
-  if (!webhook && !resendKey) {
+  if (attempted === 0) {
     console.log("[LEAD]", JSON.stringify(lead));
+  } else if (failures.length === attempted) {
+    // Every configured delivery backend failed — surface it so the client can
+    // fall back to WhatsApp instead of the lead being silently lost.
+    console.error("[LEAD delivery failed]", failures, JSON.stringify(lead));
+    return NextResponse.json({ error: "delivery_failed", failures }, { status: 502 });
   } else if (failures.length) {
-    console.error("[LEAD delivery failures]", failures, JSON.stringify(lead));
-    // still return ok — lead is logged; delivery can be retried from logs
+    console.error("[LEAD partial delivery failures]", failures, JSON.stringify(lead));
   }
 
   return NextResponse.json({ ok: true });

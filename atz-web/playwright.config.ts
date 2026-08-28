@@ -7,12 +7,10 @@ export default defineConfig({
     baseURL: process.env.BASE_URL ?? "http://localhost:3311",
     headless: true,
   },
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: "npm run start -- -p 3311",
-        url: "http://localhost:3311",
-        reuseExistingServer: true,
-        timeout: 60_000,
-      },
+  webServer: {
+    command: "npm run start -- -p 3311",
+    url: "http://localhost:3311",
+    reuseExistingServer: !process.env.CI,
+    timeout: 60_000,
+  },
 });

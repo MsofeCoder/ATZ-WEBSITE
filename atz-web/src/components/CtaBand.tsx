@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import type { Dict } from "@/dictionaries";
+import { WA_URL } from "@/lib/site";
 
 export default function CtaBand({ dict, onOpenModal }: { dict: Dict; onOpenModal: () => void }) {
-  const [modalOpen] = useState(false);
-  void modalOpen;
   return (
     <section id="contact" className="relative overflow-hidden bg-gold py-20">
       <div className="absolute -right-15 -top-15 h-[280px] w-[280px] rounded-full border-[40px] border-navy/[0.06]" aria-hidden="true" />
@@ -23,9 +21,9 @@ export default function CtaBand({ dict, onOpenModal }: { dict: Dict; onOpenModal
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
           </button>
           <a
-            href="https://wa.me/255794557333"
+            href={WA_URL}
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2.5 rounded-sm border border-navy-deep/15 bg-navy-deep/[0.08] px-6 py-4 font-display text-sm font-bold text-navy-deep transition hover:bg-[#25D366]"
           >
             {dict.cta.whatsapp}

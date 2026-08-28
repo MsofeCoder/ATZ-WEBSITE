@@ -33,7 +33,15 @@ export const metadata: Metadata = {
     description:
       "A Tanzanian brand ecosystem across design, AI, and code. Empowering vision. Engineering the future.",
     images: ["/ATZ_LOGO.png"],
+    url: "/",
     type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "ATZ Company Limited — One Vision. Three Engines.",
+    description:
+      "A Tanzanian brand ecosystem across design, AI, and code. Empowering vision. Engineering the future.",
+    images: ["/ATZ_LOGO.png"],
   },
 };
 
