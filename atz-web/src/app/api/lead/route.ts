@@ -1,126 +1,131 @@
 import { NextResponse } from "next/server";
-import { EMAIL_RE } from "@/lib/validation";
+import { randomUUID } from "node:crypto";
+import { leadSchema, MIN_FILL_MS, type Lead } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { deliverLead, hasLeadDelivery } from "@/lib/leads";
+import { SITE_URL, IS_PRODUCTION } from "@/lib/env";
 
-// Simple in-memory rate limit (per instance). Swap for Upstash Redis in multi-instance prod.
-const hits = new Map<string, { count: number; reset: number }>();
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 5;
+export const runtime = "nodejs";
+/** Never cached — every call mutates state. */
+export const dynamic = "force-dynamic";
 
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  // Prune expired entries so the map cannot grow unbounded
-  if (hits.size > 0) {
-    for (const [key, rec] of hits) {
-      if (now > rec.reset) hits.delete(key);
-    }
-  }
-  const rec = hits.get(ip);
-  if (!rec || now > rec.reset) {
-    hits.set(ip, { count: 1, reset: now + WINDOW_MS });
+/**
+ * Rejects cross-site posts. The form is same-origin, so a missing or foreign
+ * Origin is either a bot or a CSRF attempt. Requests without an Origin header
+ * at all (curl, server-to-server) are allowed outside production so the e2e
+ * API contract test can run.
+ */
+function originAllowed(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return !IS_PRODUCTION;
+  try {
+    const host = req.headers.get("host");
+    const url = new URL(origin);
+    if (host && url.host === host) return true;
+    return url.origin === SITE_URL;
+  } catch {
     return false;
   }
-  rec.count += 1;
-  return rec.count > MAX_PER_WINDOW;
 }
 
+function clientIp(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]!.trim();
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
+/** Bots learn nothing from this: it is indistinguishable from success. */
+const silentOk = () => NextResponse.json({ ok: true });
+
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  if (rateLimited(ip)) {
-    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  if (!originAllowed(req)) {
+    return NextResponse.json({ error: "forbidden_origin" }, { status: 403 });
   }
 
-  let body: Record<string, unknown>;
+  const ip = clientIp(req);
+  const limit = await checkRateLimit(`lead:${ip}`, { limit: 5, windowSeconds: 60 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(limit.resetSeconds),
+          "RateLimit-Limit": String(limit.limit),
+          "RateLimit-Remaining": String(limit.remaining),
+        },
+      }
+    );
+  }
+
+  let raw: unknown;
   try {
-    body = await req.json();
+    raw = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  // honeypot: bots fill hidden fields
-  if (typeof body._gotcha === "string" && body._gotcha.length > 0) {
-    // pretend success so bots learn nothing
-    return NextResponse.json({ ok: true });
+  const parsed = leadSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "validation", fields: Object.keys(parsed.error.flatten().fieldErrors) },
+      { status: 400 }
+    );
   }
+  const input = parsed.data;
 
-  const name = String(body.name ?? "").trim();
-  const email = String(body.email ?? "").trim();
-  if (!name || !EMAIL_RE.test(email)) {
-    return NextResponse.json({ error: "validation" }, { status: 400 });
-  }
+  // Two cheap bot filters before any outbound work: a hidden field humans
+  // never see, and a form submitted faster than a person can type.
+  if (input._gotcha) return silentOk();
+  if (input._ts && Date.now() - input._ts < MIN_FILL_MS) return silentOk();
 
-  const lead = {
-    name,
-    email,
-    company: String(body.company ?? "").slice(0, 200),
-    phone: String(body.phone ?? "").slice(0, 50),
-    service: String(body.service ?? "").slice(0, 120),
-    budget: String(body.budget ?? "").slice(0, 60),
-    timeline: String(body.timeline ?? "").slice(0, 60),
-    message: String(body.message ?? "").slice(0, 5000),
-    locale: body.locale === "sw" ? "sw" : "en",
+  const lead: Lead = {
+    id: randomUUID(),
     receivedAt: new Date().toISOString(),
+    name: input.name,
+    email: input.email,
+    company: input.company,
+    phone: input.phone,
+    service: input.service,
+    budget: input.budget,
+    timeline: input.timeline,
+    message: input.message,
+    locale: input.locale,
   };
 
-  // ---- Delivery backends -------------------------------------------------
-  // 1. Webhook (Formspree / Zapier / Make / your endpoint) — set LEAD_WEBHOOK_URL
-  // 2. Resend email — set RESEND_API_KEY + LEAD_NOTIFY_EMAIL
-  // 3. Otherwise: log to server console so Vercel logs capture it.
-  const webhook = process.env.LEAD_WEBHOOK_URL;
-  const resendKey = process.env.RESEND_API_KEY;
-  const notifyEmail = process.env.LEAD_NOTIFY_EMAIL ?? "info@atzcompany.co.tz";
-  const failures: string[] = [];
-  let attempted = 0;
-
-  if (webhook) {
-    attempted++;
-    try {
-      const res = await fetch(webhook, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lead),
-      });
-      if (!res.ok) failures.push(`webhook:${res.status}`);
-    } catch {
-      failures.push("webhook:network");
+  // No delivery backend configured: refuse rather than accept a lead that
+  // nobody will ever read. A console log is not a delivery mechanism.
+  if (!hasLeadDelivery()) {
+    if (IS_PRODUCTION) {
+      console.error("[lead] no delivery backend configured — refusing", { id: lead.id });
+      return NextResponse.json({ error: "unavailable" }, { status: 503 });
     }
+    console.warn("[lead] dev mode, no backend configured:", JSON.stringify(lead));
+    return NextResponse.json({ ok: true, id: lead.id, dev: true });
   }
 
-  if (resendKey) {
-    attempted++;
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "ATZ Website <onboarding@resend.dev>",
-          to: [notifyEmail],
-          subject: `Consultation Request — ${lead.company || lead.name}`,
-          text:
-            `Name: ${lead.name}\nCompany: ${lead.company}\nEmail: ${lead.email}\n` +
-            `Phone: ${lead.phone}\nService: ${lead.service}\nBudget: ${lead.budget}\n` +
-            `Timeline: ${lead.timeline}\nLocale: ${lead.locale}\n\nDetails:\n${lead.message}\n`,
-          reply_to: lead.email,
-        }),
-      });
-      if (!res.ok) failures.push(`resend:${res.status}`);
-    } catch {
-      failures.push("resend:network");
-    }
+  const report = await deliverLead(lead);
+
+  if (report.succeeded === 0) {
+    console.error("[lead] delivery failed", {
+      id: lead.id,
+      stored: report.stored,
+      failures: report.failures,
+    });
+    // Stored but undeliverable is still a captured lead — tell the visitor it
+    // landed. Neither stored nor delivered is a genuine failure.
+    if (report.stored) return NextResponse.json({ ok: true, id: lead.id, degraded: true });
+    return NextResponse.json({ error: "delivery_failed" }, { status: 502 });
   }
 
-  if (attempted === 0) {
-    console.log("[LEAD]", JSON.stringify(lead));
-  } else if (failures.length === attempted) {
-    // Every configured delivery backend failed — surface it so the client can
-    // fall back to WhatsApp instead of the lead being silently lost.
-    console.error("[LEAD delivery failed]", failures, JSON.stringify(lead));
-    return NextResponse.json({ error: "delivery_failed", failures }, { status: 502 });
-  } else if (failures.length) {
-    console.error("[LEAD partial delivery failures]", failures, JSON.stringify(lead));
+  if (report.failures.length) {
+    console.warn("[lead] partial delivery", { id: lead.id, failures: report.failures });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, id: lead.id });
+}
+
+/** Explicitly reject everything else rather than returning Next's 405 page. */
+export async function GET() {
+  return NextResponse.json({ error: "method_not_allowed" }, { status: 405 });
 }

@@ -1,16 +1,29 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ */
+/* Design tokens                                                       */
+/* ------------------------------------------------------------------ */
 :root {
-  --navy: #1B2A4A;
-  --navy-deep: #0E1730;
-  --gold: #C9A84C;
-  --gold-soft: #E4CE8F;
-  --white: #F8F9FA;
-  --slate: #4A4A4A;
-  --slate-light: #8992A3;
-  --md-a: #6A0DAD; --md-b: #E91E8C;
-  --ai-a: #00BCD4; --ai-b: #0A2540;
-  --mc-a: #1B5E20; --mc-b: #69F0AE;
+  --navy: #1b2a4a;
+  --navy-deep: #0e1730;
+  --gold: #c9a84c;
+  --gold-soft: #e4ce8f;
+  /* Accessible gold for text on light backgrounds. Brand gold (#c9a84c)
+     reaches only 2.1:1 on cream, so it is reserved for fills, borders and
+     large decorative marks; anything that must be *read* uses this. */
+  --gold-ink: #836d31;
+  --white: #f8f9fa;
+  --slate: #4a4a4a;
+  /* Muted text. The old #8992a3 reached only 2.9:1 on cream; it survives as
+     --slate-onnavy, where the dark ground gives it ample contrast. */
+  --slate-light: #69707e;
+  --slate-onnavy: #8992a3;
+  --md-a: #6a0dad;
+  --md-b: #e91e8c;
+  --ai-a: #00bcd4;
+  --ai-b: #0a2540;
+  --mc-a: #1b5e20;
+  --mc-b: #69f0ae;
 }
 
 @theme inline {
@@ -18,18 +31,20 @@
   --color-navy-deep: var(--navy-deep);
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
+  --color-gold-ink: var(--gold-ink);
   --color-cream: var(--white);
   --color-slate-ink: var(--slate);
   --color-slate-light: var(--slate-light);
+  --color-slate-onnavy: var(--slate-onnavy);
   --color-md-a: var(--md-a);
   --color-md-b: var(--md-b);
   --color-ai-a: var(--ai-a);
   --color-ai-b: var(--ai-b);
   --color-mc-a: var(--mc-a);
   --color-mc-b: var(--mc-b);
-  --font-display: var(--font-montserrat), sans-serif;
-  --font-body: var(--font-open-sans), sans-serif;
-  --font-serif-accent: var(--font-playfair), serif;
+  --font-display: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-open-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif-accent: var(--font-playfair), ui-serif, Georgia, serif;
 }
 
 html {
@@ -44,13 +59,10 @@ body {
   overflow-x: hidden;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
+/* `tabIndex={-1}` on <main> is there for the skip link; it must not paint a
+   focus ring when reached that way. */
+main:focus {
+  outline: none;
 }
 
 *:focus-visible {
@@ -59,48 +71,252 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* CSS2D labels (Three.js CSS2DRenderer overlay) — glassmorphism       */
+/* Shared utilities                                                    */
 /* ------------------------------------------------------------------ */
-.css2d-label {
-  pointer-events: none;
-  user-select: none;
+.eyebrow-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px 6px 8px;
-  border-radius: 999px;
-  font-family: var(--font-montserrat), sans-serif;
+  gap: 10px;
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 13px;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  color: #ffffff;
-  background: rgba(12, 18, 34, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: opacity 0.25s ease, transform 0.25s ease, background 0.25s ease;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--navy);
 }
 
-.css2d-label.is-active {
-  background: rgba(12, 18, 34, 0.78);
-  border-color: rgba(255, 255, 255, 0.32);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+.eyebrow-chip::before {
+  content: "";
+  width: 26px;
+  height: 2px;
+  background: var(--gold);
+  flex: none;
 }
 
-.css2d-label__logo {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: #ffffff22;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+/* ------------------------------------------------------------------ */
+/* Animations                                                          */
+/* Moved out of styled-jsx so the page needs no inline <style> element, */
+/* which lets the Content-Security-Policy drop 'unsafe-inline'.         */
+/* ------------------------------------------------------------------ */
+@keyframes riseIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Optional interactive tag inside a label — gets pointer events */
-.css2d-link {
-  pointer-events: auto;
-  cursor: pointer;
+.rise {
+  opacity: 0;
+  transform: translateY(22px);
+  animation: riseIn 0.8s cubic-bezier(0.22, 0.9, 0.35, 1) forwards;
+}
+
+@keyframes pulseSun {
+  0%,
+  100% {
+    box-shadow:
+      0 0 30px 10px rgba(201, 168, 76, 0.35),
+      0 0 90px 30px rgba(201, 168, 76, 0.16);
+  }
+  50% {
+    box-shadow:
+      0 0 38px 14px rgba(201, 168, 76, 0.5),
+      0 0 110px 40px rgba(201, 168, 76, 0.24);
+  }
+}
+
+.orbit-sun {
+  background: radial-gradient(circle at 35% 30%, #fff8e6, #e4ce8f 40%, #c9a84c 78%);
+  box-shadow:
+    0 0 30px 10px rgba(201, 168, 76, 0.35),
+    0 0 90px 30px rgba(201, 168, 76, 0.16);
+  animation: pulseSun 5s ease-in-out infinite;
+}
+
+/* Hover on the 3D orb itself, outside the small DOM chip. */
+.is-orbit-hot {
+  filter: brightness(1.2);
+}
+
+@keyframes drawerIn {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.drawer-in {
+  animation: drawerIn 0.34s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+}
+
+.backdrop-in {
+  animation: fadeIn 0.3s ease both;
+}
+
+.modal-in {
+  animation: modalIn 0.28s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+}
+
+/* ------------------------------------------------------------------ */
+/* Custom cursor — gold dot + trailing ring                            */
+/* Only on fine-pointer, hover-capable devices; <CustomCursor /> sets   */
+/* html[data-custom-cursor="on"].                                       */
+/* ------------------------------------------------------------------ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  /* Gated on `no-preference`: someone who has asked their OS to reduce motion
+     has also, in effect, asked not to have their pointer replaced by a
+     bespoke animated one — and anyone running an enlarged or high-contrast
+     system cursor needs it back. `cursor: none` is otherwise unrecoverable. */
+  html[data-custom-cursor="on"],
+  html[data-custom-cursor="on"] * {
+    cursor: none !important;
+  }
+
+  /* Text entry keeps its native caret; the custom cursor fades out there. */
+  html[data-custom-cursor="on"] input,
+  html[data-custom-cursor="on"] textarea,
+  html[data-custom-cursor="on"] select {
+    cursor: auto !important;
+  }
+}
+
+.custom-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 300; /* above the modal (z-200) */
+  pointer-events: none;
+  will-change: transform;
+  transition: opacity 0.3s ease;
+}
+
+.custom-cursor__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 10px rgba(201, 168, 76, 0.65);
+  transition:
+    opacity 0.3s ease,
+    width 0.2s cubic-bezier(0.22, 0.9, 0.35, 1),
+    height 0.2s cubic-bezier(0.22, 0.9, 0.35, 1),
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.custom-cursor__dot[data-state="hover"] {
+  width: 5px;
+  height: 5px;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+}
+
+.custom-cursor__dot[data-state="down"] {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-cursor__ring {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(201, 168, 76, 0.85);
+  background: transparent;
+  transition:
+    opacity 0.3s ease,
+    width 0.25s cubic-bezier(0.22, 0.9, 0.35, 1),
+    height 0.25s cubic-bezier(0.22, 0.9, 0.35, 1),
+    border-color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.custom-cursor__ring[data-state="hover"] {
+  width: 58px;
+  height: 58px;
+  border-color: rgba(201, 168, 76, 0.95);
+  background: rgba(201, 168, 76, 0.12);
+}
+
+.custom-cursor__ring[data-state="down"] {
+  width: 26px;
+  height: 26px;
+  background: rgba(201, 168, 76, 0.25);
+}
+
+.custom-cursor__dot[data-state="hidden"],
+.custom-cursor__ring[data-state="hidden"] {
+  opacity: 0 !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion                                                      */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The entrance animation is what makes .rise visible; with animations
+     effectively disabled it must start from its final state instead. */
+  .rise {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Scroll reveal                                                       */
+/* The hidden class is added by <Reveal /> after mount, so the          */
+/* server-rendered document is visible with JavaScript disabled.        */
+/* ------------------------------------------------------------------ */
+.reveal {
+  transition:
+    opacity 0.7s ease-out,
+    transform 0.7s ease-out;
+}
+
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-hidden {
+    opacity: 1;
+    transform: none;
+  }
 }
