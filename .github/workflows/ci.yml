@@ -16,24 +16,37 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Must match `engines.node` in package.json. This was pinned to 20
+          # while the package required >=22, so CI validated a runtime the
+          # site never ran on.
+          node-version-file: atz-web/.nvmrc
           cache: npm
           cache-dependency-path: atz-web/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      # `verify` is lint + typecheck + unit tests + build, in that order. The
+      # steps used to be spelled out here and quietly omitted `npm test`, so
+      # 40 unit tests passed locally and were never run by CI.
+      - name: Verify
+        run: npm run verify
 
-      - name: Typecheck
-        run: npx tsc --noEmit
+      - name: Check formatting
+        run: npm run format:check
 
-      - name: Build
-        run: npm run build
-
+      # Both Playwright projects are Chromium-based, so one browser download
+      # covers the whole suite.
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests (production build)
         run: npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: atz-web/playwright-report/
+          retention-days: 7

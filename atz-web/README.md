@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ATZ Company Limited — Website
 
-## Getting Started
+Marketing site for ATZ Company Limited, the Tanzanian parent company behind
+Msofe Designer (creative studio), Adam Intelligence (AI consultancy), and
+Msofe Coder (development agency).
 
-First, run the development server:
+Built with **Next.js 16 (App Router, Turbopack) · React 19 · Tailwind CSS 4 ·
+GSAP · Three.js**.
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Production:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm run start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Testing
 
-## Learn More
+```bash
+npm run lint                  # ESLint
+npx playwright test           # e2e suite (spins up a prod server on :3311)
+```
 
-To learn more about Next.js, take a look at the following resources:
+The e2e suite (`e2e/lead-funnel.spec.ts`) covers hero/section rendering, the
+Swahili locale route, modal focus management, form validation, the lead API
+contract, and the ecosystem card layout.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+  app/            App Router pages (/, /sw, /contact), robots, sitemap, JSON-LD
+  components/     UI components (client components are marked "use client")
+    HeroOrbit.tsx   ← Three.js WebGL hero (see below)
+    Hero.tsx        ← Hero layout: copy, CTAs, stats, modal
+    ...             ← Ecosystem, Testimonials, FounderQuote, CtaBand, Header, Footer
+  dictionaries/   EN + SW copy (single source of truth for all text)
+  lib/            site config, SEO helpers, validation
+```
 
-## Deploy on Vercel
+### The Three.js hero (`src/components/HeroOrbit.tsx`)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+A WebGL scene depicting the ATZ ecosystem: a fresnel-shaded glowing gold sun
+(the parent company) with three brand-colored planets (the three companies)
+orbiting on a plane, elliptical orbit lines swept by light "sparks", an
+additive-blended starfield, and mouse parallax.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Interaction model** (designed so moving bodies never fight the cursor):
+
+- **Precision mode** — when the pointer enters the orbit stage, the whole
+  system eases to a crawl; when you hover or keyboard-focus a planet, that
+  planet eases to a full stop. Leaving the stage restores full speed.
+- The **entire glowing orb is interactive** (generous 2D projected hit radius),
+  not just the small logo chip — hovering anywhere on the glow highlights it
+  and shows the tooltip; clicking it opens the company drawer.
+- **Magnetic chips** lean subtly toward the pointer.
+- Clicking any body fires a 3D pulse shockwave, opens the localized detail
+  drawer, and (for planets) scrolls to and force-opens the matching company
+  card in the ecosystem section.
+
+Accessible DOM overlay buttons (real `<button>` elements with logos and
+tooltips) are synced to the 3D bodies each frame via camera projection, so the
+scene stays fully keyboard-accessible and localized.
+
+Production safeguards built in:
+
+- `prefers-reduced-motion` → scene renders a single static frame, no loop
+- Tab hidden / hero off-screen → animation pauses (IntersectionObserver +
+  `visibilitychange`)
+- Device pixel ratio clamped to 2 for GPU headroom
+- No WebGL / Three.js load failure → static positioned fallback (buttons
+  remain usable)
+- All geometries, materials, textures, and the renderer are disposed on
+  unmount
+
+## Lead capture (`/api/lead`)
+
+POST endpoint with in-memory rate limiting, honeypot field, server-side
+validation, and three delivery backends (configurable via env):
+
+1. `LEAD_WEBHOOK_URL` — generic webhook (Formspree / Zapier / Make / custom)
+2. `RESEND_API_KEY` (+ optional `LEAD_NOTIFY_EMAIL`) — email via Resend
+3. Fallback — logs the lead to server console (visible in Vercel logs)
+
+Copy `.env.example` to `.env.local` to configure.
