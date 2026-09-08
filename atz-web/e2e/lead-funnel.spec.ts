@@ -201,6 +201,35 @@ test.describe("lead API contract", () => {
     expect(limited!.headers()["retry-after"]).toBeTruthy();
   });
 
+  test("silently drops a submission filled faster than a human could type", async ({
+    request,
+    baseURL,
+  }) => {
+    const res = await request.post("/api/lead", {
+      data: { name: "Speed Bot", email: "bot@example.com", _elapsed: 40 },
+      headers: headers(baseURL!),
+    });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+  });
+
+  test("does not mistake a human submission for a bot", async ({ request, baseURL }) => {
+    // `_elapsed` is a duration measured on one clock, so a device running
+    // fast or slow cannot fail this the way an absolute timestamp did.
+    //
+    // The assertion is about *which* answer comes back, not that it succeeds.
+    // No delivery backend is configured under test, so a genuine lead is
+    // honestly refused with 503 — while a bot gets a fake 200 and learns
+    // nothing. Getting 200 here would mean this submission had been silently
+    // discarded as a bot, which is the bug being guarded against.
+    const res = await request.post("/api/lead", {
+      data: { name: "Real Person", email: "person@example.com", _elapsed: 12_000 },
+      headers: headers(baseURL!),
+    });
+    expect(res.status(), "a human-paced lead must not be silently dropped").not.toBe(200);
+    expect([502, 503]).toContain(res.status());
+  });
+
   test("silently accepts a honeypot submission", async ({ request, baseURL }) => {
     const res = await request.post("/api/lead", {
       data: { name: "Bot", email: "bot@example.com", _gotcha: "filled" },

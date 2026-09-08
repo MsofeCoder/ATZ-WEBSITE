@@ -75,9 +75,21 @@ export async function POST(req: Request) {
   const input = parsed.data;
 
   // Two cheap bot filters before any outbound work: a hidden field humans
-  // never see, and a form submitted faster than a person can type.
-  if (input._gotcha) return silentOk();
-  if (input._ts && Date.now() - input._ts < MIN_FILL_MS) return silentOk();
+  // never see, and a form submitted faster than a person can type. Both are
+  // logged: the response is deliberately indistinguishable from success, so
+  // without a log line a false positive is invisible and a real enquiry
+  // vanishes without trace.
+  if (input._gotcha) {
+    console.warn("[lead] honeypot filled — dropping", { ip });
+    return silentOk();
+  }
+  if (input._elapsed !== undefined && input._elapsed < MIN_FILL_MS) {
+    console.warn("[lead] submitted faster than a human could type — dropping", {
+      ip,
+      elapsedMs: input._elapsed,
+    });
+    return silentOk();
+  }
 
   const lead: Lead = {
     id: randomUUID(),

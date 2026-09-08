@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { leadSchema, isValidEmail, EMAIL_RE } from "./validation";
+import { MIN_FILL_MS, leadSchema, isValidEmail, EMAIL_RE } from "./validation";
 
 describe("isValidEmail", () => {
   it.each(["a@b.co", "first.last@example.com", "user+tag@sub.domain.org"])("accepts %s", (email) =>
@@ -71,8 +71,28 @@ describe("leadSchema", () => {
     expect(leadSchema.parse({ ...valid, _gotcha: "bot" })._gotcha).toBe("bot");
   });
 
-  it("coerces the client timestamp", () => {
-    expect(leadSchema.parse({ ...valid, _ts: "1700000000000" })._ts).toBe(1700000000000);
+  it("coerces the elapsed-time field", () => {
+    expect(leadSchema.parse({ ...valid, _elapsed: "4200" })._elapsed).toBe(4200);
+  });
+
+  it("rejects a negative elapsed time", () => {
+    // The field is a duration, not a timestamp. A negative value would mean
+    // the form was submitted before it opened.
+    expect(leadSchema.safeParse({ ...valid, _elapsed: -5 }).success).toBe(false);
+  });
+
+  it("is immune to client clock skew", () => {
+    // The bug this replaced: the client sent an absolute Date.now() and the
+    // server subtracted it from its own clock. A device running five minutes
+    // fast produced a large negative difference, which fell under
+    // MIN_FILL_MS, so a real enquiry was dropped as a bot behind a success
+    // screen. An elapsed duration is measured on one clock and cannot skew.
+    const skewedDeviceClock = Date.now() + 5 * 60_000;
+    const openedAt = skewedDeviceClock;
+    const submittedAt = skewedDeviceClock + 9_000; // nine seconds of typing
+    const parsed = leadSchema.parse({ ...valid, _elapsed: submittedAt - openedAt });
+    expect(parsed._elapsed).toBe(9_000);
+    expect(parsed._elapsed!).toBeGreaterThanOrEqual(MIN_FILL_MS);
   });
 
   it("ignores unknown fields rather than failing", () => {

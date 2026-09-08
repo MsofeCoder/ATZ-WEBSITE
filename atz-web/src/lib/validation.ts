@@ -25,14 +25,23 @@ export const leadSchema = z.object({
   locale: z.enum(["en", "sw"]).default("en"),
   /** Honeypot — any value means a bot filled a field humans cannot see. */
   _gotcha: z.string().max(500).optional(),
-  /** Millisecond timestamp of when the form was opened, set by the client. */
-  _ts: z.coerce.number().int().nonnegative().optional(),
+  /**
+   * How long the form was open before submission, in milliseconds, measured
+   * entirely on the client.
+   *
+   * This used to be an absolute client timestamp that the server subtracted
+   * from its own `Date.now()` — two different clocks. A visitor whose device
+   * ran a few minutes fast produced a negative difference, tripped the
+   * too-fast bot filter, and had their enquiry silently discarded behind a
+   * success screen. An elapsed duration cancels skew out entirely.
+   */
+  _elapsed: z.coerce.number().int().nonnegative().optional(),
 });
 
 export type LeadInput = z.infer<typeof leadSchema>;
 
 /** A validated lead plus server-assigned metadata. */
-export type Lead = Omit<LeadInput, "_gotcha" | "_ts"> & {
+export type Lead = Omit<LeadInput, "_gotcha" | "_elapsed"> & {
   id: string;
   receivedAt: string;
 };

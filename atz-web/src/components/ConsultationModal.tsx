@@ -59,7 +59,7 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
         body: JSON.stringify({
           ...Object.fromEntries(fd.entries()),
           locale: dict.meta.lang,
-          _ts: openedAt,
+          _elapsed: Date.now() - openedAt,
         }),
       });
       if (res.status === 429) {
