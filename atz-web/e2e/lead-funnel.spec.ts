@@ -37,8 +37,14 @@ test.describe("home page", () => {
     const card = page.locator('[data-brand="md"]');
     const toggle = card.getByRole("button").first();
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    // Retry the open click as a unit. The markup is server-rendered, so the
+    // button exists and is clickable before React has hydrated — a click that
+    // lands in that window is simply lost, which under parallel load made this
+    // test fail intermittently for no product reason.
+    await expect(async () => {
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    }).toPass({ timeout: 15_000 });
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
@@ -58,6 +64,92 @@ test.describe("home page", () => {
     await heading.scrollIntoViewIfNeeded();
     await expect(heading).toBeVisible();
     await expect.poll(() => heading.evaluate((el) => Number(getComputedStyle(el).opacity))).toBe(1);
+  });
+});
+
+test.describe("hero orbit drawer", () => {
+  /** Returns the drawer, plus where the page was scrolled to when it opened. */
+  const openDrawer = async (page: Page) => {
+    await page.goto("/");
+    await page.waitForTimeout(1500);
+    const satellite = page.locator('[aria-label*="Msofe Designer"]').first();
+    // Scroll the *stage* into view, not the satellite.
+    //
+    // Playwright's actionability checks wait for an element to be stable, and
+    // on desktop these satellites orbit continuously — they are never stable,
+    // so `scrollIntoViewIfNeeded` on one simply times out. The canvas behind
+    // them does hold still. Scrolling it (and force-clicking afterwards) is
+    // what makes the scroll position we record meaningful on mobile, where the
+    // orbit sits below the fold.
+    await page.evaluate(() =>
+      document.querySelector("canvas")?.scrollIntoView({ block: "center", behavior: "instant" })
+    );
+    await page.waitForTimeout(400);
+    const scrollBefore = await page.evaluate(() => Math.round(window.scrollY));
+    await satellite.click({ force: true });
+    await expect(page.locator("#orbit-drawer-title")).toBeVisible();
+    return { dialog: page.getByRole("dialog"), scrollBefore };
+  };
+
+  test("opens in place without moving the page", async ({ page }) => {
+    // The regression: the click used to open the drawer *and* smooth-scroll to
+    // the ecosystem grid, so the modal appeared over a page that had jumped
+    // 882px behind it.
+    const { scrollBefore } = await openDrawer(page);
+    await page.waitForTimeout(900); // long enough for a smooth scroll to run
+    expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(scrollBefore);
+  });
+
+  /**
+   * Guards a stacking-context bug that `toBeVisible()` cannot see.
+   *
+   * The drawer sits inside the hero, whose content wrapper is `relative
+   * z-[1]` — a stacking context. Its own z-index of 191 was therefore only
+   * ever compared against its siblings, so the sticky header (z-50) and the
+   * WhatsApp button (z-40), both at the root, painted straight over it. The
+   * panel was "visible" to Playwright the whole time. It is rendered through
+   * a portal into <body> now; this asserts on what the browser actually
+   * paints, via elementFromPoint.
+   */
+  test("is not covered by the header or the floating button", async ({ page }) => {
+    await openDrawer(page);
+    const covered = await page.evaluate(() => {
+      const p = document.querySelector('[aria-labelledby="orbit-drawer-title"]') as HTMLElement;
+      const b = p.getBoundingClientRect();
+      const x = Math.round(b.left + b.width / 2);
+      const offenders: string[] = [];
+      for (let y = 8; y < b.height - 8; y += 30) {
+        const el = document.elementFromPoint(x, y);
+        if (!el || !p.contains(el)) offenders.push(`${y}px: ${el?.tagName ?? "none"}`);
+      }
+      return offenders;
+    });
+    expect(covered, "every point down the drawer must belong to the drawer").toEqual([]);
+  });
+
+  test("keeps both calls to action on screen in a short window", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    const { dialog } = await openDrawer(page);
+    // The actions are pinned in a footer while the body scrolls, so they must
+    // be fully within the viewport without any scrolling at all.
+    for (const action of [
+      dialog.getByRole("link", { name: /Visit Msofe Designer/i }),
+      dialog.getByRole("button", { name: CTA }),
+    ]) {
+      const box = await action.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(600);
+    }
+  });
+
+  test("hands off to the consultation form", async ({ page }) => {
+    const { dialog } = await openDrawer(page);
+    await dialog.getByRole("button", { name: CTA }).click();
+    await expect(page.locator("#orbit-drawer-title")).toHaveCount(0);
+    await expect(page.getByRole("dialog").getByRole("heading").first()).toBeVisible();
+    // The drawer's scroll lock must not release on the way through.
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
   });
 });
 
