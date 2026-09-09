@@ -21,9 +21,13 @@ import OrbitDrawer from "./OrbitDrawer";
  *
  * The overlay is what makes the scene accessible — the visible orbs are
  * canvas pixels, but every one of them has a focusable `<button>` tracking it,
- * so the whole thing is reachable by keyboard and screen reader. When WebGL is
- * unavailable, or the visitor is on a metered connection, those same buttons
- * lay out statically and three.js is never downloaded.
+ * so the whole thing is reachable by keyboard and screen reader.
+ *
+ * WebGL is an enhancement layered on top, never a prerequisite. The static
+ * layout paints first on every device and those same buttons stay usable;
+ * three.js is fetched afterwards, on idle, and only where
+ * `prefersLightweightScene()` allows it — so phones, low-memory devices, 2G
+ * and Data Saver never download it at all.
  */
 export default function HeroOrbit({ dict }: { dict: Dict }) {
   const wrapRef = useRef<HTMLDivElement>(null);

@@ -32,8 +32,11 @@ yarn-error.log*
 dev-server.log
 tsconfig.tsbuildinfo
 
-# env files (can opt-in for committing if needed)
+# env files. `.env*` would also swallow .env.example, which is the only
+# record of which variables the app needs — the README tells you to copy
+# it, and it was never in the repo to copy.
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -45,3 +48,8 @@ next-env.d.ts
 # Playwright artefacts
 test-results/
 playwright-report/
+
+# Local scratch/verification output — never part of the app
+.ogcheck/
+shots/
+dev-server.log
