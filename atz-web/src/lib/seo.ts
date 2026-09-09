@@ -122,9 +122,18 @@ export function buildBreadcrumbJsonLd(lang: Lang, trail: { name: string; route: 
 }
 
 /**
- * Serialises JSON-LD for `dangerouslySetInnerHTML`. Escaping `<` prevents a
- * string in the payload from closing the script tag early.
+ * Serialises JSON-LD for `dangerouslySetInnerHTML`, escaping `<` so a string
+ * in the payload cannot close the script tag early.
+ *
+ * The replacement has to be the two-character sequence `\\u003c`, which a JSON
+ * parser decodes back to `<`. Writing it as `"\u003c"` — as this did — is a no-op:
+ * that escape is resolved by the *JavaScript* parser before `replace` ever
+ * runs, so it substituted `<` for `<` and did nothing at all.
+ *
+ * Nothing was exploitable, because every value reaching here is a
+ * compile-time constant. It becomes load-bearing the moment editor-authored
+ * content reaches a JSON-LD field.
  */
 export function jsonLdScript(data: unknown): string {
-  return JSON.stringify(data).replace(/</g, "\u003c");
+  return JSON.stringify(data).replace(/</g, "\\u003c");
 }

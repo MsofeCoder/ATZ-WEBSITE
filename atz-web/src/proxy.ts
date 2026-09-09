@@ -60,9 +60,14 @@ export function proxy(request: NextRequest) {
     "upgrade-insecure-requests",
   ].join("; ");
 
-  // Passed down so server components can read the nonce for inline scripts.
   const headers = new Headers(request.headers);
+  // Read by server components (JsonLd) for their own inline script.
   headers.set("x-nonce", nonce);
+  // Read by Next itself, which parses the nonce out of the *request* CSP
+  // header to stamp its bootstrap and hydration scripts. Without this the
+  // framework's own scripts go out nonce-less and 'strict-dynamic' blocks
+  // them — the page renders and then never hydrates.
+  headers.set("Content-Security-Policy", csp);
 
   const response = NextResponse.next({ request: { headers } });
   response.headers.set("Content-Security-Policy", csp);
