@@ -1,11 +1,10 @@
-import { WA_URL } from "@/lib/site";
 import WhatsAppIcon from "@/components/icons/WhatsApp";
 
-/** Floating WhatsApp action button, present on every page. */
-export default function WhatsAppFab({ label }: { label: string }) {
+/** Floating WhatsApp action button, present on every page. `href` carries the locale's pre-filled opener. */
+export default function WhatsAppFab({ label, href }: { label: string; href: string }) {
   return (
     <a
-      href={WA_URL}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}

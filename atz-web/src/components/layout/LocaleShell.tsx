@@ -10,6 +10,7 @@ import SkipLink from "@/components/layout/SkipLink";
 import CustomCursor from "@/components/CustomCursor";
 import MotionProvider from "@/components/motion/MotionProvider";
 import { fontClassNames } from "@/lib/fonts";
+import { waLink } from "@/lib/site";
 import "@/app/globals.css";
 
 /**
@@ -33,7 +34,7 @@ export default function LocaleShell({ lang, children }: { lang: Lang; children: 
               {children}
             </main>
             <SiteFooter dict={dict} lang={lang} />
-            <WhatsAppFab label={dict.a11y.whatsapp} />
+            <WhatsAppFab label={dict.a11y.whatsapp} href={waLink(dict.wa.general)} />
           </ConsultationProvider>
         </MotionProvider>
         <CustomCursor />

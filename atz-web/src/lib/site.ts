@@ -4,7 +4,27 @@ import type { Lang } from "@/dictionaries";
 
 export const PHONE_E164 = "+255794557333";
 export const PHONE_DISPLAY = "+255 794 557 333";
-export const WA_URL = `https://wa.me/${PHONE_E164.replace("+", "")}`;
+const WA_BASE = `https://wa.me/${PHONE_E164.replace("+", "")}`;
+
+/**
+ * A WhatsApp deep link with the conversation opener already typed. Every
+ * WhatsApp CTA on the site goes through this: a visitor who taps should land
+ * in a chat that already says who they are and what they want, not a blank
+ * composer. Copy is passed in by the caller so it can come from the locale's
+ * dictionary; `WA_URL` is the English generic for places without one.
+ */
+export function waLink(message: string): string {
+  return `${WA_BASE}?text=${encodeURIComponent(message)}`;
+}
+
+/** Fills `{name}` / `{service}` style placeholders in dictionary strings. */
+export function fillTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? "");
+}
+
+export const WA_GENERIC_MESSAGE =
+  "Hello ATZ Team, I am interested in learning more about your services.";
+export const WA_URL = waLink(WA_GENERIC_MESSAGE);
 export const EMAIL = "info@atzcompany.co.tz";
 export const LOCALITY = "Morogoro";
 export const COUNTRY = "TZ";

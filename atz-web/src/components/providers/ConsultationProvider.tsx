@@ -6,8 +6,15 @@ import { AnimatePresence } from "motion/react";
 import type { Dict } from "@/dictionaries";
 import ConsultationModal from "@/components/ConsultationModal";
 
+/** Fields a CTA can pre-fill — the scope card hands over what it collected. */
+export interface ConsultationPreset {
+  /** Must match one of the `dict.modal.opt*` labels to select it. */
+  service?: string;
+  message?: string;
+}
+
 interface ConsultationContextValue {
-  open: () => void;
+  open: (preset?: ConsultationPreset) => void;
   close: () => void;
   isOpen: boolean;
 }
@@ -23,7 +30,11 @@ const ConsultationContext = createContext<ConsultationContextValue | null>(null)
  */
 export function ConsultationProvider({ dict, children }: { dict: Dict; children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const open = useCallback(() => setIsOpen(true), []);
+  const [preset, setPreset] = useState<ConsultationPreset | undefined>(undefined);
+  const open = useCallback((p?: ConsultationPreset) => {
+    setPreset(p);
+    setIsOpen(true);
+  }, []);
   const close = useCallback(() => setIsOpen(false), []);
   const value = useMemo(() => ({ open, close, isOpen }), [open, close, isOpen]);
 
@@ -32,7 +43,9 @@ export function ConsultationProvider({ dict, children }: { dict: Dict; children:
       {children}
       {/* AnimatePresence keeps the dialog mounted through its exit animation. */}
       <AnimatePresence>
-        {isOpen && <ConsultationModal key="consultation" dict={dict} onClose={close} />}
+        {isOpen && (
+          <ConsultationModal key="consultation" dict={dict} preset={preset} onClose={close} />
+        )}
       </AnimatePresence>
     </ConsultationContext.Provider>
   );

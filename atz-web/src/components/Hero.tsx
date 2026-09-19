@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { m, useReducedMotion, useScroll, useTransform } from "motion/react";
 import type { Dict } from "@/dictionaries";
-import { WA_URL } from "@/lib/site";
+import { waLink } from "@/lib/site";
 import HeroOrbit from "@/components/hero-orbit/HeroOrbit";
 import CountUp from "@/components/CountUp";
 import { useConsultation } from "@/components/providers/ConsultationProvider";
@@ -11,6 +11,7 @@ import { useEntrance } from "@/components/motion/useEntrance";
 import { staggerContainer, staggerItem } from "@/components/motion/variants";
 import WhatsAppIcon from "@/components/icons/WhatsApp";
 import ArrowRight from "@/components/icons/ArrowRight";
+import TrustBadges from "@/components/TrustBadges";
 
 /**
  * The hero.
@@ -136,14 +137,14 @@ export default function Hero({ dict }: { dict: Dict }) {
               <m.div variants={staggerItem} className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={openConsultation}
+                  onClick={() => openConsultation()}
                   className="btn-primary font-display inline-flex min-h-12 items-center gap-2.5 px-7 py-3.5 text-sm font-extrabold tracking-[0.01em]"
                 >
                   {dict.nav.cta}
                   <ArrowRight />
                 </button>
                 <a
-                  href={WA_URL}
+                  href={waLink(dict.wa.general)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-secondary font-display inline-flex min-h-12 items-center gap-2.5 px-5 py-3.5 text-sm font-bold"
@@ -151,6 +152,12 @@ export default function Hero({ dict }: { dict: Dict }) {
                   <WhatsAppIcon />
                   {dict.hero.whatsapp}
                 </a>
+              </m.div>
+
+              {/* Micro-trust row: the three objections a first visit raises,
+                  answered in the same glance as the buttons. */}
+              <m.div variants={staggerItem} className="mt-4">
+                <TrustBadges dict={dict} tone="dark" />
               </m.div>
 
               {/* Orbit interaction hint — desktop only, aria-hidden */}

@@ -111,7 +111,7 @@ export default function SiteHeader({ dict, lang }: { dict: Dict; lang: Lang }) {
           {langToggle()}
           <m.button
             type="button"
-            onClick={openConsultation}
+            onClick={() => openConsultation()}
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             transition={PRESS}

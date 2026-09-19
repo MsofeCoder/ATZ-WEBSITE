@@ -5,8 +5,10 @@ import { createPortal } from "react-dom";
 import { m } from "motion/react";
 import type { Dict } from "@/dictionaries";
 import { EASE_OUT } from "@/components/motion/variants";
-import { WA_URL, EMAIL, PHONE_DISPLAY } from "@/lib/site";
+import { waLink, fillTemplate, EMAIL, PHONE_DISPLAY } from "@/lib/site";
 import { isValidEmail } from "@/lib/validation";
+import { vaultLead, markLead } from "@/lib/lead-vault";
+import type { ConsultationPreset } from "@/components/providers/ConsultationProvider";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import WhatsAppIcon from "@/components/icons/WhatsApp";
@@ -14,7 +16,9 @@ import ArrowRight from "@/components/icons/ArrowRight";
 import CloseIcon from "@/components/icons/Close";
 
 type Status =
-  { kind: "idle" } | { kind: "error"; msg: string; showFallback?: boolean } | { kind: "success" };
+  | { kind: "idle" }
+  | { kind: "error"; msg: string; showFallback?: boolean }
+  | { kind: "success"; name: string; service: string; devOnly: boolean };
 
 const FIELD =
   "w-full rounded-sm border border-navy/20 bg-white px-3.5 py-3 text-sm text-navy transition focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/40";
@@ -25,7 +29,15 @@ const LABEL = "mb-2 block font-display text-xs font-bold uppercase tracking-wide
  * opening gets a fresh component instance. That removes the need for a reset
  * effect and guarantees the form never reopens showing a stale error.
  */
-export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClose: () => void }) {
+export default function ConsultationModal({
+  dict,
+  preset,
+  onClose,
+}: {
+  dict: Dict;
+  preset?: ConsultationPreset;
+  onClose: () => void;
+}) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -54,6 +66,15 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
 
     setStatus({ kind: "idle" });
     setSending(true);
+
+    // Captured once, before anything can fail: the fields the visitor typed,
+    // as plain strings (the honeypot excluded).
+    const fields: Record<string, string> = {};
+    for (const [k, v] of fd.entries()) if (k !== "_gotcha") fields[k] = String(v);
+    const service = fields.service ?? "";
+    // Safety net first, network second — see lib/lead-vault.ts.
+    const vaultId = vaultLead({ ...fields, locale: dict.meta.lang });
+
     try {
       const res = await fetch("/api/lead", {
         method: "POST",
@@ -65,6 +86,7 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
         }),
       });
       if (res.status === 429) {
+        markLead(vaultId, "failed");
         setStatus({ kind: "error", msg: dict.modal.errRateLimited });
         return;
       }
@@ -73,13 +95,51 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
       // them to debug something that is working — so name it honestly and put
       // the direct channels in front of them instead.
       if (res.status === 502 || res.status === 503) {
+        markLead(vaultId, "failed");
+        console.error(
+          `[lead] /api/lead answered ${res.status}: ${
+            res.status === 503
+              ? "no delivery backend configured (set LEAD_WEBHOOK_URL or RESEND_API_KEY in .env.local)"
+              : "every configured backend failed"
+          }. Lead kept in localStorage["atz:leads"] as ${vaultId}.`
+        );
         setStatus({ kind: "error", msg: dict.modal.errUnavailable, showFallback: true });
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setStatus({ kind: "success" });
+
+      const body = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        dev?: boolean;
+        degraded?: boolean;
+      };
+      // Dev-mode acceptance is not delivery. Say so where a developer will
+      // see it, and mark the vault entry accordingly.
+      if (body.dev) {
+        markLead(vaultId, "dev", body.id);
+        console.warn(
+          "%c[lead] DEV MODE — this request was NOT delivered anywhere.",
+          "color:#c9a84c;font-weight:bold",
+          "\nThe server has no LEAD_WEBHOOK_URL / RESEND_API_KEY, so /api/lead only logged it to the terminal.",
+          '\nA copy is in localStorage["atz:leads"] under id',
+          vaultId,
+          "\nFields:",
+          fields
+        );
+      } else {
+        markLead(vaultId, "sent", body.id);
+        // eslint-disable-next-line no-console -- deliberate diagnostic: confirms delivery with the server id
+        console.info(
+          `[lead] delivered — server id ${body.id ?? "?"}${body.degraded ? " (stored, notification failed)" : ""}`
+        );
+      }
+      setStatus({ kind: "success", name: fields.name ?? "", service, devOnly: Boolean(body.dev) });
       form.reset();
     } catch {
+      markLead(vaultId, "failed");
+      console.error(
+        `[lead] network failure — lead kept in localStorage["atz:leads"] as ${vaultId}.`
+      );
       setStatus({ kind: "error", msg: dict.modal.errNetwork });
     } finally {
       setSending(false);
@@ -87,6 +147,17 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
   }
 
   const succeeded = status.kind === "success";
+  const fallbackWa = waLink(dict.wa.general);
+  /** After a successful submit, WhatsApp opens with the visitor's own details. */
+  const successWa =
+    status.kind === "success"
+      ? waLink(
+          fillTemplate(dict.wa.afterSubmit, {
+            name: status.name,
+            service: status.service || dict.modal.opt4,
+          })
+        )
+      : fallbackWa;
 
   return createPortal(
     <m.div
@@ -141,7 +212,7 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
               {dict.modal.successBody}
             </p>
             <a
-              href={WA_URL}
+              href={successWa}
               target="_blank"
               rel="noopener noreferrer"
               className="font-display text-navy-deep mt-6 inline-flex items-center gap-2 rounded-sm bg-[#25D366] px-5 py-3 text-sm font-bold transition hover:-translate-y-0.5"
@@ -223,7 +294,7 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
                   id="cf-service"
                   name="service"
                   className={FIELD}
-                  defaultValue={dict.modal.opt1}
+                  defaultValue={preset?.service ?? dict.modal.opt1}
                 >
                   {[dict.modal.opt1, dict.modal.opt2, dict.modal.opt3, dict.modal.opt4].map((o) => (
                     <option key={o}>{o}</option>
@@ -281,6 +352,7 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
                   rows={4}
                   maxLength={5000}
                   placeholder={dict.modal.detailsPh}
+                  defaultValue={preset?.message}
                   className={`${FIELD} resize-y`}
                 />
               </div>
@@ -322,7 +394,7 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
                     {status.showFallback && (
                       <div className="mt-2.5 flex flex-wrap items-center gap-3">
                         <a
-                          href={WA_URL}
+                          href={fallbackWa}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="font-display text-navy-deep inline-flex items-center gap-2 rounded-sm bg-[#25D366] px-3.5 py-2 text-xs font-bold"

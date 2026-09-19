@@ -1,6 +1,6 @@
 import { getDictionary, type Lang } from "@/dictionaries";
 import { buildBreadcrumbJsonLd } from "@/lib/seo";
-import { WA_URL, EMAIL, PHONE_DISPLAY } from "@/lib/site";
+import { waLink, EMAIL, PHONE_DISPLAY } from "@/lib/site";
 import JsonLd from "@/components/layout/JsonLd";
 import ConsultationCta from "@/components/ConsultationCta";
 
@@ -82,7 +82,7 @@ export default function ContactView({ lang }: { lang: Lang }) {
           <div className="mx-auto mt-14 grid max-w-[900px] gap-6 md:grid-cols-2">
             <Card icon={ICONS.phone} title={dict.contact.callWa}>
               <a
-                href={WA_URL}
+                href={waLink(dict.wa.general)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gold-ink hover:text-navy transition"

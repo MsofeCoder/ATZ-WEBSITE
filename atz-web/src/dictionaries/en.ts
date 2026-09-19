@@ -67,6 +67,63 @@ const en = {
     sceneAlt:
       "An orbit diagram: ATZ Company Limited at the centre, with Msofe Designer, Adam Intelligence and Msofe Coder circling it.",
   },
+  wa: {
+    /** Opener typed into WhatsApp from every generic CTA. */
+    general: "Hello ATZ Team, I am interested in learning more about your services.",
+    /** After the form: {name} and {service} are filled from the submission. */
+    afterSubmit: "Hi ATZ, my name is {name}. I just submitted a request regarding {service}.",
+    /** From the scope card: {engine}, {type}, {budget}, {timeline}. */
+    scope:
+      "Hello ATZ Team, I would like to scope a project.\nEngine: {engine}\nProject: {type}\nBudget: {budget}\nTimeline: {timeline}",
+  },
+  trust: {
+    based: "Tanzania-based",
+    ownership: "100% source-code ownership",
+    response: "< 24h response time",
+  },
+  scope: {
+    eyebrow: "Instant routing",
+    h2: "Scope your project in 30 seconds",
+    p: "Pick the engine you need and we route you to the right ATZ team — before you write a word.",
+    stepEngine: "Which engine do you need?",
+    stepType: "What are you building?",
+    stepBudget: "Budget range (TZS)",
+    stepTimeline: "Timeline",
+    engines: {
+      design: { label: "Design", hint: "Brand, identity, web design" },
+      ai: { label: "AI", hint: "Automation, agents, strategy" },
+      code: { label: "Code", hint: "Web apps, systems, e-commerce" },
+      unsure: { label: "Not sure", hint: "We'll help you choose" },
+    },
+    types: {
+      design: [
+        "Logo & brand identity",
+        "Marketing collateral",
+        "Website design",
+        "Full brand system",
+      ],
+      ai: ["AI readiness audit", "Workflow automation", "Custom AI assistant", "Team training"],
+      code: ["Business website", "Web / mobile app", "ERP · CRM · POS", "Online store"],
+      unsure: [
+        "New business launch",
+        "Digital upgrade",
+        "Institution / NGO project",
+        "Something else",
+      ],
+    },
+    routedTo: "Routed to",
+    routedUnsure: "ATZ triage — we assign the right team",
+    firstStep: "Your first step",
+    firstStepUnsure:
+      "One conversation with ATZ to identify whether this is design, AI or engineering — often more than one.",
+    youReceive: "What you receive",
+    receiveUnsure:
+      "A written scope naming the team, the deliverables and the timeline — before any work starts.",
+    reply: "Reply within 24h · Written scope before any work · You own everything we build",
+    ctaForm: "Request a consultation for this scope",
+    ctaWa: "Send this scope on WhatsApp",
+    summaryPrefix: "Scope card:",
+  },
   eco: {
     eyebrow: "The ATZ Ecosystem",
     h2: "Three companies. One standard of craft.",

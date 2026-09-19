@@ -1,5 +1,6 @@
 import type { Dict } from "@/dictionaries";
-import { WA_URL } from "@/lib/site";
+import { waLink } from "@/lib/site";
+import TrustBadges from "@/components/TrustBadges";
 import ConsultationCta from "@/components/ConsultationCta";
 import Reveal from "@/components/Reveal";
 import Magnetic from "@/components/motion/Magnetic";
@@ -46,7 +47,7 @@ export default function CtaBand({ dict }: { dict: Dict }) {
           </Magnetic>
           <Magnetic strength={0.15}>
             <a
-              href={WA_URL}
+              href={waLink(dict.wa.general)}
               target="_blank"
               rel="noopener noreferrer"
               className="border-navy-deep/15 bg-navy-deep/[0.08] font-display text-navy-deep inline-flex min-h-12 items-center gap-2.5 rounded-sm border px-6 py-4 text-sm font-bold transition-colors hover:border-[#25D366] hover:bg-[#25D366] hover:text-white"
@@ -55,6 +56,9 @@ export default function CtaBand({ dict }: { dict: Dict }) {
               {dict.cta.whatsapp}
             </a>
           </Magnetic>
+        </div>
+        <div className="basis-full">
+          <TrustBadges dict={dict} tone="light" />
         </div>
       </Reveal>
     </section>

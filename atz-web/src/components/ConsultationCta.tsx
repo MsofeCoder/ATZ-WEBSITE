@@ -15,7 +15,7 @@ export default function ConsultationCta({
 }) {
   const { open } = useConsultation();
   return (
-    <button type="button" onClick={open} className={className}>
+    <button type="button" onClick={() => open()} className={className}>
       {label}
       {withArrow && <ArrowRight />}
     </button>

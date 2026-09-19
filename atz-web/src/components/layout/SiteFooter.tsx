@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Dict, Lang } from "@/dictionaries";
 import { BRAND_LIST } from "@/lib/brands";
-import { WA_URL, EMAIL, PHONE_DISPLAY, localePath, sectionHref, currentYear } from "@/lib/site";
+import { waLink, EMAIL, PHONE_DISPLAY, localePath, sectionHref, currentYear } from "@/lib/site";
 
 export default function SiteFooter({ dict, lang }: { dict: Dict; lang: Lang }) {
   return (
@@ -72,7 +72,7 @@ export default function SiteFooter({ dict, lang }: { dict: Dict; lang: Lang }) {
             </h2>
             <p className="mb-2.5 text-sm">{dict.footer.location}</p>
             <a
-              href={WA_URL}
+              href={waLink(dict.wa.general)}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-gold-soft mb-2.5 block text-sm transition"

@@ -63,6 +63,69 @@ const sw: Dict = {
     sceneAlt:
       "Mchoro wa mzunguko: ATZ Company Limited katikati, na Msofe Designer, Adam Intelligence na Msofe Coder zikiizunguka.",
   },
+  wa: {
+    general: "Habari Timu ya ATZ, ningependa kujua zaidi kuhusu huduma zenu.",
+    afterSubmit: "Habari ATZ, jina langu ni {name}. Nimetuma ombi kuhusu {service}.",
+    scope:
+      "Habari Timu ya ATZ, ningependa kupanga mradi.\nInjini: {engine}\nMradi: {type}\nBajeti: {budget}\nMuda: {timeline}",
+  },
+  trust: {
+    based: "Tupo Tanzania",
+    ownership: "Umiliki kamili wa source code",
+    response: "Majibu ndani ya saa 24",
+  },
+  scope: {
+    eyebrow: "Uelekezaji wa papo hapo",
+    h2: "Panga mradi wako kwa sekunde 30",
+    p: "Chagua injini unayohitaji na tukuelekeze kwa timu sahihi ya ATZ — kabla hujaandika neno.",
+    stepEngine: "Unahitaji injini gani?",
+    stepType: "Unajenga nini?",
+    stepBudget: "Bajeti (TZS)",
+    stepTimeline: "Muda",
+    engines: {
+      design: { label: "Ubunifu", hint: "Chapa, nembo, muundo wa tovuti" },
+      ai: { label: "AI", hint: "Otomatiki, wakala, mkakati" },
+      code: { label: "Code", hint: "Programu, mifumo, biashara mtandaoni" },
+      unsure: { label: "Sina uhakika", hint: "Tutakusaidia kuchagua" },
+    },
+    types: {
+      design: [
+        "Nembo na utambulisho wa chapa",
+        "Vifaa vya masoko",
+        "Muundo wa tovuti",
+        "Mfumo kamili wa chapa",
+      ],
+      ai: [
+        "Ukaguzi wa utayari wa AI",
+        "Otomatiki ya kazi",
+        "Msaidizi wa AI maalum",
+        "Mafunzo ya timu",
+      ],
+      code: [
+        "Tovuti ya biashara",
+        "Programu ya wavuti / simu",
+        "ERP · CRM · POS",
+        "Duka la mtandaoni",
+      ],
+      unsure: [
+        "Kuanzisha biashara mpya",
+        "Kuboresha kidijitali",
+        "Mradi wa taasisi / NGO",
+        "Kitu kingine",
+      ],
+    },
+    routedTo: "Umeelekezwa kwa",
+    routedUnsure: "Uchambuzi wa ATZ — tunateua timu sahihi",
+    firstStep: "Hatua yako ya kwanza",
+    firstStepUnsure:
+      "Mazungumzo moja na ATZ kubaini kama ni ubunifu, AI au uhandisi — mara nyingi zaidi ya moja.",
+    youReceive: "Utakachopokea",
+    receiveUnsure: "Wigo ulioandikwa unaotaja timu, matokeo na muda — kabla kazi yoyote haijaanza.",
+    reply: "Majibu ndani ya saa 24 · Wigo ulioandikwa kabla ya kazi · Unamiliki kila tunachojenga",
+    ctaForm: "Omba ushauri kwa wigo huu",
+    ctaWa: "Tuma wigo huu kwa WhatsApp",
+    summaryPrefix: "Kadi ya wigo:",
+  },
   eco: {
     eyebrow: "Mtandao wa ATZ",
     h2: "Kampuni tatu. Kiwango kimoja cha ubora.",

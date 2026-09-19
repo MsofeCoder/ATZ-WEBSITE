@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { WA_URL } from "@/lib/site";
 
 /**
  * Last-resort boundary: catches errors thrown by a root layout itself, where
@@ -59,7 +60,7 @@ export default function GlobalError({
             Try again / Jaribu tena
           </button>
           <p style={{ marginTop: "1.25rem" }}>
-            <a href="https://wa.me/255794557333" style={{ color: "#8a7328", fontSize: "0.85rem" }}>
+            <a href={WA_URL} style={{ color: "#8a7328", fontSize: "0.85rem" }}>
               WhatsApp +255 794 557 333
             </a>
           </p>

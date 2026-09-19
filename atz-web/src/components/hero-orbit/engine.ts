@@ -11,7 +11,7 @@
  */
 import type * as THREE from "three";
 import type { OrbitControls as OrbitControlsType } from "three/examples/jsm/controls/OrbitControls.js";
-import { BRAND_LIST, SUN, type BrandId, type BodyId } from "@/lib/brands";
+import { BRANDS, BRAND_LIST, SUN, type BrandId, type BodyId } from "@/lib/brands";
 
 export interface ScreenPoint {
   x: number;
@@ -965,6 +965,131 @@ export function createOrbitEngine({
     pulses.push({ mesh: m, mat, t: 0 });
   };
 
+  // ---- constellation links -----------------------------------------------
+  // One faint additive line from the star to each planet, with a stream of
+  // glow particles drifting along it — the "network" reading the brand is
+  // after. Intensity is per link and eased every frame: faint at rest,
+  // brighter while the pointer is over the stage, brighter still as the
+  // pointer nears that planet, and fully lit when it is hovered or focused.
+  const LINK_PARTICLES = lowPower ? 10 : 18;
+  interface Link {
+    planet: Planet;
+    line: THREE.Line;
+    lineMat: THREE.LineBasicMaterial;
+    linePos: Float32Array;
+    points: THREE.Points;
+    pointMat: THREE.PointsMaterial;
+    pointPos: Float32Array;
+    /** Per-particle phase along the link (0 at the star, 1 at the planet). */
+    phase: Float32Array;
+    /** Eased 0–1 intensity. */
+    glow: number;
+  }
+  const links: Link[] = [];
+  const linkGlowTex = makeGlow(255, 255, 255);
+  for (const pl of planets) {
+    const brand = BRAND_LIST.find((b) => b.id === pl.key)!;
+    const linePos = new Float32Array(6);
+    const lineGeo = track(new T.BufferGeometry());
+    lineGeo.setAttribute("position", new T.BufferAttribute(linePos, 3));
+    const lineMat = track(
+      new T.LineBasicMaterial({
+        color: brand.accentSecondaryHex,
+        transparent: true,
+        opacity: 0,
+        blending: T.AdditiveBlending,
+        depthWrite: false,
+        fog: false,
+      })
+    );
+    const line = new T.Line(lineGeo, lineMat);
+    line.raycast = () => {};
+    line.frustumCulled = false;
+
+    const pointPos = new Float32Array(LINK_PARTICLES * 3);
+    const phase = new Float32Array(LINK_PARTICLES);
+    for (let i = 0; i < LINK_PARTICLES; i++) phase[i] = (i + Math.random() * 0.6) / LINK_PARTICLES;
+    const pointGeo = track(new T.BufferGeometry());
+    pointGeo.setAttribute("position", new T.BufferAttribute(pointPos, 3));
+    const pointMat = track(
+      new T.PointsMaterial({
+        color: brand.accentSecondaryHex,
+        map: linkGlowTex,
+        size: 0.55,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0,
+        blending: T.AdditiveBlending,
+        depthWrite: false,
+        fog: false,
+      })
+    );
+    const points = new T.Points(pointGeo, pointMat);
+    points.raycast = () => {};
+    points.frustumCulled = false;
+
+    // Children of the star group, whose local frame is the system's own —
+    // so a planet's world position mapped through `worldToLocal` lands
+    // exactly on the rendered body whatever the scene's scroll offset.
+    sunGroup.add(line, points);
+    links.push({ planet: pl, line, lineMat, linePos, points, pointMat, pointPos, phase, glow: 0 });
+  }
+
+  const linkV = new T.Vector3();
+  const linkNdc = new T.Vector3();
+  const updateLinks = (dt: number, elapsed: number) => {
+    for (const l of links) {
+      const p = l.planet;
+      // Target intensity: rest → stage hover → pointer proximity → hovered.
+      linkNdc.copy(p.worldPos).project(camera);
+      const dx = pointer.x - linkNdc.x;
+      const dy = pointer.y + linkNdc.y; // pointer y is screen-down, NDC is up
+      const prox = stageHover ? Math.max(0, 1 - Math.hypot(dx, dy) / 0.7) : 0;
+      const intro = introRaw(p);
+      const target =
+        Math.min(1, (stageHover ? 0.45 : 0.15) + prox * 0.5 + (p.hovered || p.paused ? 1 : 0)) *
+        Math.min(1, Math.max(0, intro));
+      l.glow += (target - l.glow) * (1 - Math.pow(0.004, dt));
+
+      // Endpoints: just outside the star's surface to just short of the body.
+      linkV.copy(p.worldPos);
+      sunGroup.worldToLocal(linkV);
+      const len = linkV.length() || 1;
+      const ux = linkV.x / len;
+      const uy = linkV.y / len;
+      const uz = linkV.z / len;
+      const start = SUN_RADIUS * 1.25;
+      const end = len - BRANDS[p.key].bodyRadius * 1.3;
+      l.linePos[0] = ux * start;
+      l.linePos[1] = uy * start;
+      l.linePos[2] = uz * start;
+      l.linePos[3] = ux * end;
+      l.linePos[4] = uy * end;
+      l.linePos[5] = uz * end;
+      (l.line.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+
+      // Particles drift star → planet; faster when lit. Reduced motion holds
+      // them still.
+      const speed = reducedMotion ? 0 : 0.06 + l.glow * 0.16;
+      for (let i = 0; i < LINK_PARTICLES; i++) {
+        let t = (l.phase[i]! + elapsed * speed) % 1;
+        if (t < 0) t += 1;
+        const d = start + (end - start) * t;
+        // A slight sinusoidal wobble off the axis so the stream reads as
+        // particles rather than beads on a wire.
+        const wob = Math.sin(t * Math.PI * 3 + i) * 0.18 * (1 - t);
+        l.pointPos[i * 3] = ux * d + wob * uy;
+        l.pointPos[i * 3 + 1] = uy * d - wob * ux;
+        l.pointPos[i * 3 + 2] = uz * d;
+      }
+      (l.points.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+
+      l.lineMat.opacity = 0.08 + l.glow * 0.6;
+      l.pointMat.opacity = 0.35 + l.glow * 0.65;
+      l.pointMat.size = 0.55 + l.glow * 0.4;
+    }
+  };
+
   // ---- camera + projection ----------------------------------------------
 
   let camDist = 22;
@@ -1235,6 +1360,8 @@ export function createOrbitEngine({
       // Refresh world position for emitFrame projection
       p.mesh.getWorldPosition(p.worldPos);
     }
+
+    updateLinks(dt, elapsed);
 
     // Sun: slow axial spin + granulation time + medallion facing camera
     sunMesh.rotation.y = elapsed * (reducedMotion ? 0.012 : 0.03);

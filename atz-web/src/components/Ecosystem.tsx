@@ -5,6 +5,7 @@ import type { Dict } from "@/dictionaries";
 import { m } from "motion/react";
 import { BRAND_LIST, type Brand, type BrandId } from "@/lib/brands";
 import SectionHeading from "@/components/sections/SectionHeading";
+import ScopeEstimator from "@/components/ScopeEstimator";
 import TiltCard from "@/components/motion/TiltCard";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { PRESS } from "@/components/motion/variants";
@@ -198,6 +199,9 @@ export default function Ecosystem({ dict }: { dict: Dict }) {
             </StaggerItem>
           ))}
         </Stagger>
+        {/* Instant routing: pick an engine, get the team, first step and
+            deliverables — with the choices carried into the form / WhatsApp. */}
+        <ScopeEstimator dict={dict} />
       </div>
     </section>
   );
