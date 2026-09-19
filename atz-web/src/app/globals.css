@@ -93,44 +93,47 @@ main:focus {
   flex: none;
 }
 
+.eyebrow-chip--dark {
+  color: var(--gold-soft);
+}
+
 /* ------------------------------------------------------------------ */
 /* Animations                                                          */
-/* Moved out of styled-jsx so the page needs no inline <style> element, */
-/* which lets the Content-Security-Policy drop 'unsafe-inline'.         */
+/* Entrances, reveals and overlays are driven by motion (`m.*`), which  */
+/* writes inline styles and needs no <style> element — so the           */
+/* Content-Security-Policy keeps 'unsafe-inline' out of script-src.     */
+/* What remains here are the continuous, purely decorative loops.       */
 /* ------------------------------------------------------------------ */
-@keyframes riseIn {
-  to {
-    opacity: 1;
-    transform: translateY(0);
+/* Shimmer sweep for gradient text in the hero headline */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
   }
 }
 
-.rise {
-  opacity: 0;
-  transform: translateY(22px);
-  animation: riseIn 0.8s cubic-bezier(0.22, 0.9, 0.35, 1) forwards;
+/* One sweep on arrival, then still. Three words shimmering forever competed
+   with the orbit for attention; a single pass reads as a highlight. */
+.gradient-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 2.4s ease-out 0.6s 1 both;
 }
 
-@keyframes pulseSun {
+/* Soft breathing glow for the primary CTA */
+@keyframes ctaGlow {
   0%,
   100% {
-    box-shadow:
-      0 0 30px 10px rgba(201, 168, 76, 0.35),
-      0 0 90px 30px rgba(201, 168, 76, 0.16);
+    box-shadow: 0 0 16px 2px rgba(201, 168, 76, 0.2);
   }
   50% {
-    box-shadow:
-      0 0 38px 14px rgba(201, 168, 76, 0.5),
-      0 0 110px 40px rgba(201, 168, 76, 0.24);
+    box-shadow: 0 0 28px 6px rgba(201, 168, 76, 0.35);
   }
 }
 
-.orbit-sun {
-  background: radial-gradient(circle at 35% 30%, #fff8e6, #e4ce8f 40%, #c9a84c 78%);
-  box-shadow:
-    0 0 30px 10px rgba(201, 168, 76, 0.35),
-    0 0 90px 30px rgba(201, 168, 76, 0.16);
-  animation: pulseSun 5s ease-in-out infinite;
+.cta-glow {
+  animation: ctaGlow 3s ease-in-out infinite;
 }
 
 /* Hover on the 3D orb itself, outside the small DOM chip. */
@@ -138,47 +141,114 @@ main:focus {
   filter: brightness(1.2);
 }
 
-@keyframes drawerIn {
-  from {
-    transform: translateX(32px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
+/* ------------------------------------------------------------------ */
+/* Hero orbit stage                                                     */
+/* ------------------------------------------------------------------ */
+/* Sized for what each viewport actually shows. Below `lg` the scene is the
+   static arrangement — sun plus three chips — which needs ~360px, not the
+   520px+ the WebGL system was given; the old height left a screen of empty
+   navy between the CTAs and the stats on every phone. */
+.orbit-stage {
+  height: clamp(320px, 88vw, 420px);
+}
+
+@media (min-width: 1024px) {
+  .orbit-stage {
+    /* Leaves room for the stats bar inside a 900px-tall viewport. */
+    height: min(66vh, 620px);
+    min-height: 460px;
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* Static-scene bodies. The reticle spans are transparent so the WebGL
+   render shows through them; without WebGL that left empty dashed rings.
+   These fills give the static scene real bodies, and disappear the moment
+   the engine takes over (`data-scene="webgl"`). */
+.orb-fill {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  overflow: hidden;
+  transition: opacity 0.6s ease;
 }
 
-@keyframes modalIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.orb-fill img {
+  width: 62%;
+  height: 62%;
+  object-fit: contain;
 }
 
-.drawer-in {
-  animation: drawerIn 0.34s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+.orb-fill--sun {
+  width: 92px;
+  height: 92px;
+  background: radial-gradient(circle at 38% 32%, #f4dc8a 0%, #c9a84c 46%, #8a6d22 100%);
+  box-shadow:
+    0 0 0 6px rgba(201, 168, 76, 0.12),
+    0 0 46px rgba(201, 168, 76, 0.55),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.35);
 }
 
-.backdrop-in {
-  animation: fadeIn 0.3s ease both;
+.orb-fill--sun img {
+  width: 66%;
+  height: 66%;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
 }
 
-.modal-in {
-  animation: modalIn 0.28s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+.orb-fill--planet {
+  width: 48px;
+  height: 48px;
+  border: 1.5px solid;
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(255, 255, 255, 0.16),
+    rgba(14, 23, 48, 0.96) 70%
+  );
+}
+
+.orb-fill--planet img {
+  width: 58%;
+  height: 58%;
+}
+
+.orbit-stage[data-scene="webgl"] .orb-fill {
+  opacity: 0;
+}
+
+/* Static scene: the dashed reticle around an already-solid body is noise;
+   the body itself is the target now. */
+.orbit-stage[data-scene="static"] span:has(> .orb-fill) > span:first-child {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero orbit focus — fade hero text when a planet drawer is open       */
+/* Mirrors the standalone repo's hero--focused .hero__inner rule.       */
+/* ------------------------------------------------------------------ */
+.hero-text-col {
+  transition:
+    opacity 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.hero-orbit-focused .hero-text-col {
+  opacity: 0.06;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+/* Interaction hint below CTA row — visible only on desktop (where WebGL runs) */
+.orbit-hint {
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.38);
+  font-family: var(--font-display);
+  margin-top: 0.75rem;
+  user-select: none;
 }
 
 /* ------------------------------------------------------------------ */
@@ -273,6 +343,95 @@ main:focus {
 }
 
 /* ------------------------------------------------------------------ */
+/* Language toggle — premium pill with country maps                     */
+/* ------------------------------------------------------------------ */
+.lang-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  background: linear-gradient(135deg, rgba(27, 42, 74, 0.06) 0%, rgba(27, 42, 74, 0.03) 100%);
+  border: 1px solid rgba(27, 42, 74, 0.12);
+  border-radius: 14px;
+  padding: 3px;
+  gap: 0;
+  box-shadow:
+    0 1px 3px rgba(27, 42, 74, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* The sliding active-indicator pill */
+.lang-toggle__pill {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  border-radius: 11px;
+  background: var(--navy);
+  box-shadow:
+    0 2px 8px rgba(27, 42, 74, 0.25),
+    0 1px 2px rgba(27, 42, 74, 0.15);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 0;
+}
+
+.lang-toggle__option {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 52px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 11px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.lang-toggle__option:hover:not(.lang-toggle__option--active) {
+  background: rgba(27, 42, 74, 0.06);
+}
+
+/* Country-outline silhouette */
+.lang-toggle__map {
+  width: 16px;
+  height: 14px;
+  transition: all 0.25s ease;
+  opacity: 0.4;
+  color: var(--navy);
+}
+
+.lang-toggle__option--active .lang-toggle__map {
+  opacity: 1;
+  color: var(--gold);
+  filter: drop-shadow(0 0 3px rgba(201, 168, 76, 0.4));
+}
+
+.lang-toggle__option:hover:not(.lang-toggle__option--active) .lang-toggle__map {
+  opacity: 0.7;
+  transform: scale(1.1);
+}
+
+/* Text label */
+.lang-toggle__label {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  color: var(--navy);
+  transition: all 0.25s ease;
+}
+
+.lang-toggle__option--active .lang-toggle__label {
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ */
 /* Reduced motion                                                      */
 /* ------------------------------------------------------------------ */
 @media (prefers-reduced-motion: reduce) {
@@ -287,36 +446,5 @@ main:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
-  }
-
-  /* The entrance animation is what makes .rise visible; with animations
-     effectively disabled it must start from its final state instead. */
-  .rise {
-    opacity: 1;
-    transform: none;
-    animation: none;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Scroll reveal                                                       */
-/* The hidden class is added by <Reveal /> after mount, so the          */
-/* server-rendered document is visible with JavaScript disabled.        */
-/* ------------------------------------------------------------------ */
-.reveal {
-  transition:
-    opacity 0.7s ease-out,
-    transform 0.7s ease-out;
-}
-
-.reveal-hidden {
-  opacity: 0;
-  transform: translateY(24px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reveal-hidden {
-    opacity: 1;
-    transform: none;
   }
 }

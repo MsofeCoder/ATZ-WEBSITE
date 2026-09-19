@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { AnimatePresence, motionValue, useMotionValueEvent, type MotionValue } from "motion/react";
 import type { Dict } from "@/dictionaries";
 import { BRAND_LIST, SUN, type BrandId, type BodyId } from "@/lib/brands";
 import {
@@ -29,11 +30,18 @@ import OrbitDrawer from "./OrbitDrawer";
  * `prefersLightweightScene()` allows it — so phones, low-memory devices, 2G
  * and Data Saver never download it at all.
  */
-export default function HeroOrbit({ dict }: { dict: Dict }) {
+export default function HeroOrbit({
+  dict,
+  scrollProgress,
+}: {
+  dict: Dict;
+  /** The hero's scroll progress (0 at rest, 1 scrolled out) — see `Hero`. */
+  scrollProgress?: MotionValue<number>;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sunBtnRef = useRef<HTMLButtonElement>(null);
-  const sunLabelRef = useRef<HTMLSpanElement>(null);
+  const sunTipRef = useRef<HTMLDivElement>(null);
   const planetRefs = useRef<Map<BrandId, HTMLButtonElement>>(new Map());
   const tipRefs = useRef<Map<BrandId, HTMLDivElement>>(new Map());
   const engineRef = useRef<OrbitEngine | null>(null);
@@ -43,6 +51,14 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
 
   const [drawerBody, setDrawerBody] = useState<BodyId | null>(null);
   const [activePlanet, setActivePlanet] = useState<BrandId | null>(null);
+  // "static" until three.js takes over; the CSS uses it to show the logo
+  // fills that stand in for the rendered bodies.
+  const [scene, setScene] = useState<"static" | "webgl">("static");
+  // WCAG 2.2.2: anything that moves for more than five seconds needs a
+  // control to stop it. This is that control; the drawer's own pausing must
+  // not silently override a visitor's choice, hence the ref.
+  const [userPaused, setUserPaused] = useState(false);
+  const userPausedRef = useRef(false);
 
   const openDrawer = useCallback((key: BodyId) => {
     drawerOpenRef.current = true;
@@ -50,14 +66,31 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
     if (key !== "sun") setActivePlanet(key);
     engineRef.current?.pulse(key);
     engineRef.current?.setPlaying(false);
+    // Fade the hero text column so the focused planet + drawer are unobstructed.
+    document.getElementById("hero-section")?.classList.add("hero-orbit-focused");
   }, []);
 
   const closeDrawer = useCallback(() => {
     drawerOpenRef.current = false;
     setDrawerBody(null);
     setActivePlanet(null);
-    engineRef.current?.setPlaying(true);
+    if (!userPausedRef.current) engineRef.current?.setPlaying(true);
+    // Restore the hero text column.
+    document.getElementById("hero-section")?.classList.remove("hero-orbit-focused");
   }, []);
+
+  const togglePaused = useCallback(() => {
+    const next = !userPausedRef.current;
+    userPausedRef.current = next;
+    setUserPaused(next);
+    if (!drawerOpenRef.current) engineRef.current?.setPlaying(!next);
+  }, []);
+
+  // Scroll-linked camera. A MotionValue subscription, not React state: it
+  // changes every scrolled pixel and must never re-render the overlay.
+  useMotionValueEvent(scrollProgress ?? fallbackMotionValue, "change", (v) => {
+    engineRef.current?.setScrollProgress(v);
+  });
 
   // Keep a stable reference the engine's event handlers can call without
   // being torn down and rebuilt whenever the callback identity changes.
@@ -81,7 +114,7 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
         el.style.zIndex = String(p.z);
         el.style.opacity = String(p.opacity);
         if (tip) {
-          tip.style.transform = `translate3d(${x}px, ${y - 34 * p.scale}px, 0) translate(-50%,-100%)`;
+          tip.style.transform = `translate3d(${x}px, ${y - 48 * p.scale}px, 0) translate(-50%,-100%)`;
         }
       }
     };
@@ -101,26 +134,30 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
       }
     }
 
-    place(sunBtnRef.current, null, f.sun);
-    if (sunLabelRef.current) {
-      sunLabelRef.current.style.transform = `translate3d(${f.sun.x}px, ${
-        f.sun.y + 66 * f.sun.scale
-      }px, 0) translateX(-50%)`;
-    }
+    place(sunBtnRef.current, sunTipRef.current, f.sun);
     for (const [key, point] of f.planets) {
-      place(
-        planetRefs.current.get(key),
-        tipRefs.current.get(key),
-        point,
-        magnetRef.current.get(key) ?? { x: 0, y: 0 }
-      );
+      const el = planetRefs.current.get(key);
+      place(el, tipRefs.current.get(key), point, magnetRef.current.get(key) ?? { x: 0, y: 0 });
+
+      // Light the chip from wherever the star actually is on screen.
+      if (el) {
+        const dx = f.sun.x - point.x;
+        const dy = f.sun.y - point.y;
+        const len = Math.hypot(dx, dy) || 1;
+        el.style.setProperty("--lx", `${((dx / len) * 30).toFixed(1)}%`);
+        el.style.setProperty("--ly", `${((dy / len) * 30).toFixed(1)}%`);
+      }
     }
   }, []);
 
-  const setTooltip = (key: BrandId, visible: boolean) => {
-    const tip = tipRefs.current.get(key);
-    if (tip) tip.style.opacity = visible ? "1" : "0";
-    planetRefs.current.get(key)?.classList.toggle("is-orbit-hot", visible);
+  const setTooltip = (key: BodyId, visible: boolean) => {
+    if (key === "sun") {
+      if (sunTipRef.current) sunTipRef.current.style.opacity = visible ? "1" : "0";
+    } else {
+      const tip = tipRefs.current.get(key);
+      if (tip) tip.style.opacity = visible ? "1" : "0";
+      planetRefs.current.get(key)?.classList.toggle("is-orbit-hot", visible);
+    }
   };
 
   useEffect(() => {
@@ -164,8 +201,14 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       let THREE: typeof import("three");
+      let OrbitControls: (typeof import("three/examples/jsm/controls/OrbitControls.js"))["OrbitControls"];
       try {
-        THREE = await import("three");
+        const [threeModule, orbitModule] = await Promise.all([
+          import("three"),
+          import("three/examples/jsm/controls/OrbitControls.js"),
+        ]);
+        THREE = threeModule;
+        OrbitControls = orbitModule.OrbitControls;
       } catch {
         // Keep the static layout; it is already on screen.
         return;
@@ -174,12 +217,14 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
 
       const engine = createOrbitEngine({
         THREE,
+        OrbitControls,
         canvas,
         wrap,
         reducedMotion,
         onFrame: applyFrame,
         onHoverChange: (key) => {
           for (const b of BRAND_LIST) setTooltip(b.id, b.id === key);
+          setTooltip("sun", key === "sun");
         },
       });
 
@@ -190,6 +235,11 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
       releaseStatic();
       releaseStatic = () => {};
       engineRef.current = engine;
+      setScene("webgl");
+      if (userPausedRef.current) engine.setPlaying(false);
+
+      const onResize = () => engine.applyHome();
+      window.addEventListener("resize", onResize, { passive: true });
 
       /**
        * Maps a pointer event into the stage's own normalised space, and
@@ -207,12 +257,28 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
       };
 
       const onMove = (e: PointerEvent) => pointerFromEvent(e);
+
+      // Track pointer-down position so we can distinguish drag from click.
+      let pointerDownAt: { x: number; y: number } | null = null;
+      const onPointerDown = (e: PointerEvent) => {
+        pointerDownAt = { x: e.clientX, y: e.clientY };
+      };
+
       // Clicking the glowing orb itself (outside the small DOM chip) opens the
-      // drawer; the chip handles its own click.
+      // drawer; the chip handles its own click. Movements > 6px are drags.
       const onDown = (e: PointerEvent) => {
         if (drawerOpenRef.current) return;
         if ((e.target as Element | null)?.closest("button")) return;
         if (!pointerFromEvent(e)) return;
+
+        // Distinguish orbit-drag from tap using the ≤6px threshold.
+        if (pointerDownAt) {
+          const dx = e.clientX - pointerDownAt.x;
+          const dy = e.clientY - pointerDownAt.y;
+          pointerDownAt = null;
+          if (Math.hypot(dx, dy) > 6) return;
+        }
+
         const hit = engine.hitTest();
         if (hit) openDrawerRef.current(hit);
       };
@@ -225,13 +291,16 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
       if (!reducedMotion) {
         window.addEventListener("pointermove", onMove, { passive: true });
       }
-      wrap.addEventListener("pointerdown", onDown, { passive: true });
+      wrap.addEventListener("pointerdown", onPointerDown, { passive: true });
+      wrap.addEventListener("pointerup", onDown, { passive: true });
       wrap.addEventListener("pointerenter", onStageEnter);
       wrap.addEventListener("pointerleave", onStageLeave);
 
       cleanup = () => {
         window.removeEventListener("pointermove", onMove);
-        wrap.removeEventListener("pointerdown", onDown);
+        window.removeEventListener("resize", onResize);
+        wrap.removeEventListener("pointerdown", onPointerDown);
+        wrap.removeEventListener("pointerup", onDown);
         wrap.removeEventListener("pointerenter", onStageEnter);
         wrap.removeEventListener("pointerleave", onStageLeave);
         engineRef.current = null;
@@ -283,12 +352,23 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
   }, [applyFrame]);
 
   return (
-    <div
-      ref={wrapRef}
-      className="relative w-full"
-      style={{ height: "min(72vh, 640px)", minHeight: 380 }}
-    >
-      <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 block h-full w-full" />
+    <div ref={wrapRef} className="orbit-stage relative w-full" data-scene={scene}>
+      {/* The canvas is aria-hidden and the orbs are real buttons, so assistive
+          tech gets the structure; this line gives it the picture. */}
+      <p className="sr-only">{dict.hero.sceneAlt}</p>
+      {/* Masked so the scene fades into the section rather than sitting in a
+          hard-edged rectangle: the renderer clears to a deeper black than the
+          hero's navy. The orbits stay inside the solid 60% core. */}
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className="absolute inset-0 block h-full w-full"
+        style={{
+          maskImage: "radial-gradient(ellipse 50% 50% at 50% 50%, black 60%, transparent 100%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse 50% 50% at 50% 50%, black 60%, transparent 100%)",
+        }}
+      />
 
       {/* Accessible overlay, positioned to match the 3D scene each frame. */}
       <div className="pointer-events-none absolute inset-0 z-[2]">
@@ -302,28 +382,87 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
           ref={sunBtnRef}
           type="button"
           onClick={() => openDrawer("sun")}
-          className="orbit-sun pointer-events-auto absolute top-0 left-0 z-[4] flex h-[100px] w-[100px] items-center justify-center rounded-full border-none p-0"
+          onMouseEnter={() => setTooltip("sun", true)}
+          onMouseLeave={() => setTooltip("sun", false)}
+          onFocus={() => setTooltip("sun", true)}
+          onBlur={() => setTooltip("sun", false)}
+          className="group pointer-events-auto absolute top-0 left-0 z-[4] flex h-[130px] w-[130px] cursor-pointer items-center justify-center rounded-full border-none p-0 transition-transform duration-300 hover:scale-110"
           style={{ opacity: 0, willChange: "transform" }}
           aria-label={`${SUN.name} — ${dict.solar.overviewAria}`}
         >
-          <Image
-            src={SUN.logo}
-            alt=""
-            width={72}
-            height={72}
-            priority
-            className="h-[70%] w-[70%] object-contain"
-            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.25))" }}
-          />
+          {/* Subtle targeting reticle: pure transparency lets the 3D celestial Star shine through! */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none flex h-[104px] w-[104px] items-center justify-center rounded-full transition-all duration-300 group-hover:scale-115"
+          >
+            <span
+              className="border-gold/35 group-hover:border-gold/85 h-full w-full rounded-full border border-dashed transition-all duration-300 group-hover:border-solid"
+              style={{
+                boxShadow: "0 0 35px rgba(201,168,76,0.4)",
+              }}
+            />
+            {/* Static-scene body: the star as a lit gold disc carrying the mark.
+                Hidden the moment WebGL renders the real one. */}
+            <span className="orb-fill orb-fill--sun">
+              <Image src={SUN.logo} alt="" width={64} height={64} priority />
+            </span>
+          </span>
         </button>
-        <span
-          ref={sunLabelRef}
+
+        {/* Sun Hover Reveal Card */}
+        <div
+          ref={sunTipRef}
           aria-hidden="true"
-          className="font-display text-gold-soft absolute top-0 left-0 z-[4] text-center text-[0.72rem] font-extrabold tracking-[0.1em] whitespace-nowrap uppercase"
-          style={{ transform: "translate(-50%,0)" }}
+          className="pointer-events-none absolute top-0 left-0 z-[50] opacity-0 transition-opacity duration-300 will-change-transform"
+          style={{ transform: "translate3d(-200px,-200px,0)" }}
         >
-          {dict.solar.centre}
-        </span>
+          <div
+            className="flex items-center gap-3.5 rounded-2xl border border-white/20 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(14,23,48,0.95) 0%, rgba(8,14,32,0.98) 100%)",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.6), 0 0 28px rgba(201,168,76,0.35)",
+            }}
+          >
+            <div className="border-gold/40 bg-gold/10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border p-1.5 shadow-md">
+              <Image
+                src={SUN.logo}
+                alt=""
+                width={38}
+                height={38}
+                className="h-full w-full object-contain"
+              />
+            </div>
+            <div className="flex flex-col text-left whitespace-nowrap">
+              <div className="flex items-center gap-2">
+                <span className="font-display text-sm font-extrabold tracking-wide text-white">
+                  {SUN.name}
+                </span>
+                <span className="bg-gold text-navy-deep rounded-full px-2 py-0.5 text-[0.62rem] font-bold tracking-wider uppercase shadow-sm">
+                  {dict.solar.parentBadge}
+                </span>
+              </div>
+              <span className="text-gold-soft mt-0.5 flex items-center gap-1.5 text-[0.7rem] font-semibold opacity-95">
+                <span>{dict.solar.clickOverview}</span>
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div
+            className="mx-auto -mt-1.5 h-3 w-3 rotate-45 border-r border-b border-white/20"
+            style={{ background: "rgba(8,14,32,0.98)" }}
+          />
+        </div>
 
         {BRAND_LIST.map((brand) => {
           const copy = dict.solar[brand.id];
@@ -335,14 +474,11 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
                 if (el) planetRefs.current.set(brand.id, el);
                 else planetRefs.current.delete(brand.id);
               }}
-              className="focus-visible:outline-gold pointer-events-auto absolute top-0 left-0 z-[3] flex h-[58px] w-[58px] items-center justify-center rounded-full border-2 border-white/85 bg-white p-[6px] transition-[filter] hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px]"
+              className="group focus-visible:outline-gold pointer-events-auto absolute top-0 left-0 z-[3] flex h-[76px] w-[76px] items-center justify-center rounded-full border-none bg-transparent p-0 transition-[filter,transform] hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px]"
               style={{
                 opacity: 0,
                 willChange: "transform",
                 transform: "translate3d(-200px,-200px,0)",
-                boxShadow: `0 0 16px 3px ${brand.glow}${
-                  activePlanet === brand.id ? ", 0 0 0 3px #C9A84C" : ""
-                }`,
               }}
               aria-label={`${copy.title} — ${copy.tag} — ${dict.solar.openAria}`}
               onClick={() => openDrawer(brand.id)}
@@ -364,8 +500,6 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
                 engineRef.current?.setPlanetPaused(brand.id, false);
               }}
               onPointerMove={(e) => {
-                // Magnetic lean toward the pointer, clamped so the button
-                // never separates from the orb it is tracking.
                 const r = e.currentTarget.getBoundingClientRect();
                 const dx = e.clientX - (r.left + r.width / 2);
                 const dy = e.clientY - (r.top + r.height / 2);
@@ -375,37 +509,138 @@ export default function HeroOrbit({ dict }: { dict: Dict }) {
                 });
               }}
             >
-              <Image
-                src={brand.logo}
-                alt=""
-                width={46}
-                height={46}
-                className="h-full w-full rounded-full object-contain"
-              />
+              {/* Subtle targeting reticle: pure transparency lets the 3D procedural object shine through! */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none flex h-[56px] w-[56px] items-center justify-center rounded-full transition-all duration-300 group-hover:scale-115"
+              >
+                <span
+                  className="h-full w-full rounded-full border border-dashed border-white/30 transition-all duration-300 group-hover:border-solid group-hover:border-white/70"
+                  style={{
+                    boxShadow: activePlanet === brand.id ? `0 0 24px ${brand.glow}` : "none",
+                  }}
+                />
+                {/* Static-scene body: a brand-lit chip with the company mark. */}
+                <span
+                  className="orb-fill orb-fill--planet"
+                  style={{
+                    borderColor: brand.accentBright,
+                    boxShadow: `0 0 22px ${brand.glow}, inset 0 0 12px ${brand.glow}`,
+                  }}
+                >
+                  <Image src={brand.logo} alt="" width={40} height={40} />
+                </span>
+              </span>
             </button>
           );
         })}
 
-        {BRAND_LIST.map((brand) => (
-          <div
-            key={`tip-${brand.id}`}
-            aria-hidden="true"
-            ref={(el) => {
-              if (el) tipRefs.current.set(brand.id, el);
-              else tipRefs.current.delete(brand.id);
-            }}
-            className="bg-navy-deep/95 pointer-events-none absolute top-0 left-0 z-[6] rounded-[3px] border border-white/15 px-3 py-[6px] text-[0.74rem] font-bold tracking-[0.02em] whitespace-nowrap text-white opacity-0 transition-opacity"
-            style={{ transform: "translate3d(-200px,-200px,0)" }}
-          >
-            {dict.solar[brand.id].title}
-            <span className="text-slate-onnavy mt-0.5 block text-[0.66rem] font-semibold tracking-[0.06em] uppercase">
-              {dict.solar[brand.id].tag}
-            </span>
-          </div>
-        ))}
+        {/* Hover-Reveal Holographic Cards for each company */}
+        {BRAND_LIST.map((brand) => {
+          const copy = dict.solar[brand.id];
+          return (
+            <div
+              key={`tip-${brand.id}`}
+              aria-hidden="true"
+              ref={(el) => {
+                if (el) tipRefs.current.set(brand.id, el);
+                else tipRefs.current.delete(brand.id);
+              }}
+              className="pointer-events-none absolute top-0 left-0 z-50 opacity-0 transition-opacity duration-300 will-change-transform"
+              style={{ transform: "translate3d(-200px,-200px,0)" }}
+            >
+              <div
+                className="flex items-center gap-3.5 rounded-2xl border border-white/25 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(14,23,48,0.94) 0%, rgba(8,14,32,0.98) 100%)",
+                  boxShadow: `0 12px 32px rgba(0,0,0,0.6), 0 0 24px ${brand.glow}`,
+                }}
+              >
+                {/* Revealed Company Logo */}
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-1.5 shadow-md"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02))",
+                    border: `1.5px solid ${brand.accentBright}`,
+                  }}
+                >
+                  <Image
+                    src={brand.logo}
+                    alt=""
+                    width={38}
+                    height={38}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+
+                {/* Company Title & Specialty Tag */}
+                <div className="flex flex-col text-left whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span className="font-display text-sm font-extrabold tracking-wide text-white">
+                      {copy.title}
+                    </span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[0.62rem] font-bold tracking-wider text-white uppercase shadow-sm"
+                      style={{ background: brand.accentBright }}
+                    >
+                      {copy.tag}
+                    </span>
+                  </div>
+                  <span className="text-gold-soft mt-0.5 flex items-center gap-1.5 text-[0.7rem] font-semibold opacity-95">
+                    <span>{dict.solar.clickExplore}</span>
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+
+              {/* Pointing notch */}
+              <div
+                className="mx-auto -mt-1.5 h-3 w-3 rotate-45 border-r border-b border-white/25"
+                style={{ background: "rgba(8,14,32,0.98)" }}
+              />
+            </div>
+          );
+        })}
       </div>
 
-      {drawerBody && <OrbitDrawer bodyId={drawerBody} dict={dict} onClose={closeDrawer} />}
+      {/* Motion control — only meaningful once the scene actually moves. */}
+      {scene === "webgl" && (
+        <button
+          type="button"
+          onClick={togglePaused}
+          aria-pressed={userPaused}
+          className="orbit-pause font-display focus-visible:outline-gold bg-navy-deep/70 absolute right-2 bottom-2 z-[5] inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-[0.68rem] font-bold tracking-[0.16em] text-white/80 uppercase backdrop-blur-md transition-colors duration-200 hover:border-white/35 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            {userPaused ? <path d="M7 5v14l12-7z" /> : <path d="M6 5h4v14H6zM14 5h4v14h-4z" />}
+          </svg>
+          {userPaused ? dict.hero.playOrbit : dict.hero.pauseOrbit}
+        </button>
+      )}
+
+      <AnimatePresence>
+        {drawerBody && (
+          <OrbitDrawer key={drawerBody} bodyId={drawerBody} dict={dict} onClose={closeDrawer} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
+/**
+ * `useMotionValueEvent` needs a value to subscribe to on every render; when
+ * the parent passes none, this inert one keeps the hook order stable.
+ */
+const fallbackMotionValue = motionValue(0);

@@ -1,5 +1,8 @@
 import type { Dict } from "@/dictionaries";
 import Reveal from "@/components/Reveal";
+import SectionHeading from "@/components/sections/SectionHeading";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import HoverLift from "@/components/motion/HoverLift";
 
 const STEP_ICONS = [
   // One point of contact
@@ -33,53 +36,68 @@ export default function Approach({ dict }: { dict: Dict }) {
   ];
 
   return (
-    <section id="approach" className="scroll-mt-24 bg-white py-20 md:py-[110px]">
-      <div className="mx-auto max-w-[1180px] px-5 md:px-8">
-        <Reveal>
-          <div className="mx-auto mb-14 max-w-[660px]">
-            <span className="eyebrow-chip">{dict.approach.eyebrow}</span>
-            <h2 className="font-display text-navy mt-3.5 text-3xl font-extrabold md:text-[2.7rem]">
-              {dict.approach.h2}
-            </h2>
-            <p className="text-slate-ink mt-4 max-w-[560px]">{dict.approach.p}</p>
-          </div>
-        </Reveal>
+    <section
+      id="approach"
+      className="relative scroll-mt-24 overflow-hidden bg-white py-20 md:py-[110px]"
+    >
+      {/* Faint dot grid so the white section reads as a surface, not a gap */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        style={{
+          backgroundImage: "radial-gradient(rgba(27,42,74,0.12) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+          maskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent)",
+          WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent)",
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative mx-auto max-w-[1180px] px-5 md:px-8">
+        <SectionHeading
+          eyebrow={dict.approach.eyebrow}
+          title={dict.approach.h2}
+          lede={dict.approach.p}
+        />
 
-        <ol className="grid gap-6 lg:grid-cols-3">
-          {steps.map((s, i) => (
-            <Reveal
-              key={s.h}
-              as="li"
-              delay={i * 120}
-              className="border-navy/10 flex h-full flex-col rounded-md border bg-white p-8 shadow-sm transition hover:-translate-y-1.5 hover:shadow-[0_20px_40px_rgba(27,42,74,0.1)]"
-            >
-              <div className="mb-5 flex items-center gap-3">
-                <span className="bg-gold/12 text-gold flex h-11 w-11 shrink-0 items-center justify-center rounded-full">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-5 w-5"
-                    aria-hidden="true"
-                  >
-                    {STEP_ICONS[i]}
-                  </svg>
-                </span>
-                <span className="font-display text-slate-light text-xs font-bold tracking-widest uppercase">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-              </div>
-              <h3 className="font-display text-navy text-lg font-extrabold">{s.h}</h3>
-              <p className="text-slate-ink mt-2.5 text-sm leading-relaxed">{s.p}</p>
-            </Reveal>
-          ))}
-        </ol>
+        <div className="relative">
+          {/* Connector between the three steps, desktop only. Outside the
+              list so it is not counted as a fourth item. */}
+          <div
+            aria-hidden="true"
+            className="from-gold/0 via-gold/50 to-gold/0 pointer-events-none absolute top-[54px] right-[12%] left-[12%] hidden h-px bg-gradient-to-r lg:block"
+          />
+          <Stagger as="ol" className="relative grid gap-6 lg:grid-cols-3" stagger={0.12}>
+            {steps.map((s, i) => (
+              <StaggerItem key={s.h} as="li" className="h-full">
+                <HoverLift className="border-navy/10 relative flex h-full flex-col rounded-md border bg-white p-8 shadow-sm">
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="bg-gold/12 text-gold-ink ring-gold/20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-4 ring-inset">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-5 w-5"
+                        aria-hidden="true"
+                      >
+                        {STEP_ICONS[i]}
+                      </svg>
+                    </span>
+                    <span className="font-display text-slate-light text-xs font-bold tracking-widest uppercase">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                  </div>
+                  <h3 className="font-display text-navy text-lg font-extrabold">{s.h}</h3>
+                  <p className="text-slate-ink mt-2.5 text-sm leading-relaxed text-pretty">{s.p}</p>
+                </HoverLift>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </div>
 
         <Reveal delay={360}>
-          <p className="font-serif-accent text-slate-ink mx-auto mt-10 max-w-[620px] text-center text-base italic">
+          <p className="font-serif-accent text-slate-ink mx-auto mt-10 max-w-[620px] text-center text-base text-pretty italic">
             {dict.approach.note}
           </p>
         </Reveal>

@@ -57,8 +57,15 @@ const en = {
     sub: "ATZ Company Limited is the parent studio behind three specialist companies — creative design, applied AI, and full-stack development — working as one under a single standard of craft, built for institutions and businesses across Tanzania and East Africa.",
     whatsapp: "Chat on WhatsApp",
     stat1: "Specialist companies",
-    stat2: "Disciplines under one roof",
-    stat3: "Tanzania — our home base",
+    stat2: "Ownership guaranteed",
+    stat3: "Response time",
+    stat4: "Founded",
+    orbitHint: "Drag to orbit · Click a company to explore",
+    tapHint: "Tap a company to explore",
+    pauseOrbit: "Pause",
+    playOrbit: "Play",
+    sceneAlt:
+      "An orbit diagram: ATZ Company Limited at the centre, with Msofe Designer, Adam Intelligence and Msofe Coder circling it.",
   },
   eco: {
     eyebrow: "The ATZ Ecosystem",
@@ -222,6 +229,9 @@ const en = {
     centre: "ATZ Company",
     openAria: "open profile",
     overviewAria: "open overview",
+    parentBadge: "Parent company",
+    clickOverview: "Click for an overview",
+    clickExplore: "Click to explore",
     sun: {
       tag: "The Vision · ATZ",
       title: "ATZ Company Limited",

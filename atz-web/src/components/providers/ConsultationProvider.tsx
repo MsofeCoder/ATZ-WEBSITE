@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { AnimatePresence } from "motion/react";
 import type { Dict } from "@/dictionaries";
 import ConsultationModal from "@/components/ConsultationModal";
 
@@ -29,7 +30,10 @@ export function ConsultationProvider({ dict, children }: { dict: Dict; children:
   return (
     <ConsultationContext.Provider value={value}>
       {children}
-      {isOpen && <ConsultationModal dict={dict} onClose={close} />}
+      {/* AnimatePresence keeps the dialog mounted through its exit animation. */}
+      <AnimatePresence>
+        {isOpen && <ConsultationModal key="consultation" dict={dict} onClose={close} />}
+      </AnimatePresence>
     </ConsultationContext.Provider>
   );
 }

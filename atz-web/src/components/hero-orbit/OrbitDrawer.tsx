@@ -3,7 +3,9 @@
 import { useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import { m } from "motion/react";
 import type { Dict } from "@/dictionaries";
+import { EASE_OUT } from "@/components/motion/variants";
 import { BRANDS, SUN, accentFor, type BodyId } from "@/lib/brands";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -62,17 +64,25 @@ export default function OrbitDrawer({
 
   return createPortal(
     <>
-      <div
-        className="backdrop-in bg-navy-deep/55 fixed inset-0 z-[190] backdrop-blur-sm"
+      <m.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.2 } }}
+        transition={{ duration: 0.3 }}
+        className="bg-navy-deep/55 fixed inset-0 z-[190] backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside
+      <m.aside
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="orbit-drawer-title"
-        className="drawer-in bg-navy-deep fixed top-0 right-0 bottom-0 z-[191] flex w-full max-w-[420px] flex-col overflow-hidden border-l border-white/10"
+        initial={{ x: 40, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 40, opacity: 0, transition: { duration: 0.2, ease: "easeIn" } }}
+        transition={{ duration: 0.34, ease: EASE_OUT }}
+        className="bg-navy-deep fixed top-0 right-0 bottom-0 z-[191] flex w-full max-w-[420px] flex-col overflow-hidden border-l border-white/10"
       >
         <div className="h-1.5 w-full flex-none" style={{ background: meta.gradient }} />
         <button
@@ -186,7 +196,7 @@ export default function OrbitDrawer({
             </button>
           </div>
         </div>
-      </aside>
+      </m.aside>
     </>,
     document.body
   );

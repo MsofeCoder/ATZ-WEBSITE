@@ -53,8 +53,15 @@ const sw: Dict = {
     sub: "ATZ Company Limited ni kampuni mama inayosimamia kampuni tatu maalum — ubunifu wa kisanii, akili bandia, na uhandisi wa programu — zikifanya kazi kama moja chini ya kiwango kimoja cha ubora, kwa ajili ya taasisi na biashara Tanzania na Afrika Mashariki.",
     whatsapp: "Wasiliana kwa WhatsApp",
     stat1: "Kampuni maalum",
-    stat2: "Fani chini ya paa moja",
-    stat3: "Tanzania — nyumbani kwetu",
+    stat2: "Umiliki kamili",
+    stat3: "Muda wa majibu",
+    stat4: "Mwaka wa kuanzishwa",
+    orbitHint: "Buruta kuzunguka · Bonyeza kampuni kuchunguza",
+    tapHint: "Gusa kampuni kuchunguza",
+    pauseOrbit: "Simamisha",
+    playOrbit: "Endelea",
+    sceneAlt:
+      "Mchoro wa mzunguko: ATZ Company Limited katikati, na Msofe Designer, Adam Intelligence na Msofe Coder zikiizunguka.",
   },
   eco: {
     eyebrow: "Mtandao wa ATZ",
@@ -219,6 +226,9 @@ const sw: Dict = {
     centre: "Kampuni ya ATZ",
     openAria: "fungua wasifu",
     overviewAria: "fungua muhtasari",
+    parentBadge: "Kampuni mama",
+    clickOverview: "Bofya kwa muhtasari",
+    clickExplore: "Bofya kuchunguza",
     sun: {
       tag: "Maono · ATZ",
       title: "ATZ Company Limited",

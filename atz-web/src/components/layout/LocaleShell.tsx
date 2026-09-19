@@ -8,6 +8,7 @@ import SiteFooter from "@/components/layout/SiteFooter";
 import WhatsAppFab from "@/components/layout/WhatsAppFab";
 import SkipLink from "@/components/layout/SkipLink";
 import CustomCursor from "@/components/CustomCursor";
+import MotionProvider from "@/components/motion/MotionProvider";
 import { fontClassNames } from "@/lib/fonts";
 import "@/app/globals.css";
 
@@ -25,14 +26,16 @@ export default function LocaleShell({ lang, children }: { lang: Lang; children: 
     <html lang={dict.meta.htmlLang} suppressHydrationWarning>
       <body className={fontClassNames}>
         <SkipLink label={dict.a11y.skipToContent} />
-        <ConsultationProvider dict={dict}>
-          <SiteHeader dict={dict} lang={lang} />
-          <main id="main" tabIndex={-1}>
-            {children}
-          </main>
-          <SiteFooter dict={dict} lang={lang} />
-          <WhatsAppFab label={dict.a11y.whatsapp} />
-        </ConsultationProvider>
+        <MotionProvider>
+          <ConsultationProvider dict={dict}>
+            <SiteHeader dict={dict} lang={lang} />
+            <main id="main" tabIndex={-1}>
+              {children}
+            </main>
+            <SiteFooter dict={dict} lang={lang} />
+            <WhatsAppFab label={dict.a11y.whatsapp} />
+          </ConsultationProvider>
+        </MotionProvider>
         <CustomCursor />
         <Analytics />
         <SpeedInsights />

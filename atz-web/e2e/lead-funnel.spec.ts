@@ -28,7 +28,11 @@ test.describe("home page", () => {
     await expect(page.locator("#ecosystem [data-brand]")).toHaveCount(3);
     for (const brand of ["md", "ai", "mc"]) {
       await expect(page.locator(`[data-brand="${brand}"] ul li`).first()).toBeVisible();
-      await expect(page.locator(`[data-brand="${brand}"] > div > ul > li`)).toHaveCount(3);
+      // The stat chips are the card's first list; the services/process lists
+      // live in the collapsed details panel below it.
+      await expect(page.locator(`[data-brand="${brand}"] ul`).first().locator("> li")).toHaveCount(
+        3
+      );
     }
   });
 

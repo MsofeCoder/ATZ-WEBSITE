@@ -6,8 +6,8 @@ const PAGES = ["/", "/contact", "/privacy", "/terms", "/sw", "/sw/contact"];
 test.describe("accessibility", () => {
   // Scroll-reveal fades sections in from opacity 0. Axe blends that against
   // the background and reports every faded element as a contrast failure, so
-  // the scan runs with reduced motion: <Reveal> then leaves content alone and
-  // axe measures the colours the design actually ships.
+  // the scan runs with reduced motion: <Reveal> and <Stagger> then leave
+  // content alone and axe measures the colours the design actually ships.
   test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
   });
@@ -67,10 +67,10 @@ test.describe("accessibility", () => {
   test("respects prefers-reduced-motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    // The entrance animation must not leave content invisible.
+    // The hero's staggered entrance must not leave content invisible: under
+    // reduced motion `useEntrance` never hides anything in the first place.
     const opacity = await page
-      .locator(".rise")
-      .first()
+      .getByRole("heading", { level: 1 })
       .evaluate((el) => getComputedStyle(el).opacity);
     expect(Number(opacity)).toBe(1);
   });

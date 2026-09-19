@@ -2,7 +2,9 @@
 
 import { useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { m } from "motion/react";
 import type { Dict } from "@/dictionaries";
+import { EASE_OUT } from "@/components/motion/variants";
 import { WA_URL, EMAIL, PHONE_DISPLAY } from "@/lib/site";
 import { isValidEmail } from "@/lib/validation";
 import { useScrollLock } from "@/hooks/useScrollLock";
@@ -87,20 +89,28 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
   const succeeded = status.kind === "success";
 
   return createPortal(
-    <div
+    <m.div
       ref={overlayRef}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.18 } }}
+      transition={{ duration: 0.25 }}
       className="bg-navy-deep/60 fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 backdrop-blur-sm md:p-6"
       onMouseDown={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div
+      <m.div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={succeeded ? undefined : descId}
-        className="modal-in relative my-auto max-h-[92vh] w-full max-w-[560px] overflow-y-auto rounded-lg bg-white p-6 shadow-2xl md:p-10"
+        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.16 } }}
+        transition={{ duration: 0.3, ease: EASE_OUT }}
+        className="relative my-auto max-h-[92vh] w-full max-w-[560px] overflow-y-auto rounded-lg bg-white p-6 shadow-2xl md:p-10"
       >
         <button
           type="button"
@@ -330,8 +340,8 @@ export default function ConsultationModal({ dict, onClose }: { dict: Dict; onClo
             </form>
           </>
         )}
-      </div>
-    </div>,
+      </m.div>
+    </m.div>,
     document.body
   );
 }
