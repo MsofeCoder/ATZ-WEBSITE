@@ -273,6 +273,7 @@ const sw: Dict = {
     detailsPh: "Unajenga nini, na mafanikio yataonekanaje?",
     send: "Tuma Ombi",
     sending: "Inatuma…",
+    sent: "Imetumwa",
     consent:
       "Tunatumia maelezo haya kujibu ombi lako pekee. Angalia Sera yetu ya Faragha, au tuombe tufute maelezo yako kupitia",
     errRequired: "Tafadhali jaza jina lako na barua pepe sahihi.",

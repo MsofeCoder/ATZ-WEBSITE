@@ -19,6 +19,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://atzcompany
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 const serverSchema = z.object({
+  WEB3FORMS_ACCESS_KEY: z.string().min(1).optional(),
   LEAD_WEBHOOK_URL: z.url().optional(),
   RESEND_API_KEY: z.string().min(1).optional(),
   LEAD_NOTIFY_EMAIL: z.email().default("info@atzcompany.co.tz"),
@@ -50,7 +51,7 @@ export function serverEnv(): ServerEnv {
 /** True when at least one lead-delivery backend is configured. */
 export function hasLeadDelivery(): boolean {
   const env = serverEnv();
-  return Boolean(env.LEAD_WEBHOOK_URL || env.RESEND_API_KEY);
+  return Boolean(env.WEB3FORMS_ACCESS_KEY || env.LEAD_WEBHOOK_URL || env.RESEND_API_KEY);
 }
 
 /** True when Upstash Redis credentials are present (durable store + rate limit). */

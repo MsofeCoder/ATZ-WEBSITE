@@ -380,36 +380,77 @@ main:focus {
 }
 
 /* ------------------------------------------------------------------ */
-/* Language toggle — flag + code, sliding navy pill                     */
+/* Language toggle — 3-D pill                                           */
+/* A recessed track (inset shadow, top-lit gradient) with a raised      */
+/* indicator that slides between the two sides. The indicator's colour  */
+/* follows the side it sits on: gold-edged navy for English, emerald-   */
+/* edged navy for Swahili (`data-active`). Options are real links; the  */
+/* slide uses the hard ease-in/snap curve from the reference design.    */
 /* ------------------------------------------------------------------ */
 .lang-toggle {
   position: relative;
   display: inline-flex;
   align-items: stretch;
-  background: linear-gradient(135deg, rgba(27, 42, 74, 0.06) 0%, rgba(27, 42, 74, 0.03) 100%);
-  border: 1px solid rgba(27, 42, 74, 0.12);
-  border-radius: 999px;
   padding: 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(27, 42, 74, 0.14);
+  background: linear-gradient(180deg, #e3e7ee 0%, #f3f5f8 60%, #ffffff 100%);
   box-shadow:
-    0 1px 3px rgba(27, 42, 74, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    inset 0 2px 4px rgba(27, 42, 74, 0.16),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* The sliding active-indicator pill. Width and travel are both "half the
-   track", so it lands exactly under whichever option is active. */
+/* The sliding indicator. Width and travel are both "half the track", so it
+   lands exactly under whichever option is active. */
 .lang-toggle__pill {
   position: absolute;
   top: 3px;
   left: 3px;
+  z-index: 0;
   width: calc(50% - 3px);
   height: calc(100% - 6px);
   border-radius: 999px;
-  background: var(--navy);
+  background: linear-gradient(180deg, #34497a 0%, #1b2a4a 52%, #111c36 100%);
   box-shadow:
-    0 2px 8px rgba(27, 42, 74, 0.28),
-    0 1px 2px rgba(27, 42, 74, 0.15);
-  transition: transform 0.38s cubic-bezier(0.34, 1.3, 0.64, 1);
-  z-index: 0;
+    0 2px 6px rgba(27, 42, 74, 0.35),
+    0 6px 14px rgba(27, 42, 74, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(201, 168, 76, 0.55);
+  transition: all 0.6s cubic-bezier(1, 0, 1, 1);
+}
+
+/* Left side (English): warm gold edge. */
+.lang-toggle[data-active="en"] .lang-toggle__pill {
+  background: linear-gradient(180deg, #34497a 0%, #1b2a4a 52%, #111c36 100%);
+  box-shadow:
+    0 2px 6px rgba(27, 42, 74, 0.35),
+    0 6px 14px rgba(27, 42, 74, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(201, 168, 76, 0.55),
+    0 0 12px rgba(201, 168, 76, 0.25);
+}
+
+/* Right side (Swahili): emerald edge, borrowed from the flag. */
+.lang-toggle[data-active="sw"] .lang-toggle__pill {
+  background: linear-gradient(180deg, #2f5a55 0%, #1b3a4a 52%, #10222f 100%);
+  box-shadow:
+    0 2px 6px rgba(16, 60, 50, 0.35),
+    0 6px 14px rgba(27, 42, 74, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(30, 181, 58, 0.6),
+    0 0 12px rgba(30, 181, 58, 0.25);
+}
+
+/* Pressed while the welcome cue plays: sink into the track. */
+.lang-toggle[data-pending] .lang-toggle__pill {
+  box-shadow:
+    0 1px 2px rgba(27, 42, 74, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .lang-toggle__option {
@@ -435,6 +476,11 @@ main:focus {
 
 .lang-toggle__option:hover:not(.lang-toggle__option--active) {
   background: rgba(27, 42, 74, 0.06);
+}
+
+.lang-toggle__option:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 
 /* Flag: a small rounded mark with a hairline so light fields (the white of
@@ -485,11 +531,12 @@ main:focus {
   letter-spacing: 0.12em;
   line-height: 1;
   color: var(--navy);
-  transition: color 0.25s ease;
+  transition: color 0.6s cubic-bezier(1, 0, 1, 1);
 }
 
 .lang-toggle__option--active .lang-toggle__label {
   color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
 }
 
 /* ------------------------------------------------------------------ */
@@ -666,23 +713,94 @@ main:focus {
   will-change: transform;
   transition: opacity 0.25s ease;
   transform: translate3d(-400px, -400px, 0);
+  /* 3-D stage for the tilt card below. */
+  perspective: 1000px;
 }
 
+/* The card is a 3-D tilt card: flat while hidden, and as it appears it swings
+   toward the viewer around a (0.5, 1, 0) axis while the logo and copy lift off
+   the surface on the Z axis. `backdrop-filter` forces `transform-style: flat`,
+   so the glass ground lives on ::before and the card itself stays preserve-3d
+   for its children. Colours follow the brand through --tip-accent/--tip-glow. */
 .orb-tip__card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  background: linear-gradient(135deg, rgba(14, 23, 48, 0.94) 0%, rgba(8, 14, 32, 0.98) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  transform-style: preserve-3d;
+  transform: rotate3d(0.5, 1, 0, 0deg);
+  transition:
+    transform 0.5s ease-in-out,
+    box-shadow 0.5s ease-in-out,
+    border-color 0.5s ease-in-out;
   box-shadow:
     0 12px 32px rgba(0, 0, 0, 0.6),
     0 0 24px var(--tip-glow, rgba(201, 168, 76, 0.35));
 }
 
+.orb-tip__card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(14, 23, 48, 0.94) 0%, rgba(8, 14, 32, 0.98) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateZ(0);
+}
+
+/* Animated gradient ring, revealed while the card is tilted. */
+.orb-tip__card::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -2;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--ring-angle, 0deg),
+    var(--tip-accent, var(--gold)),
+    transparent 30%,
+    var(--tip-accent, var(--gold)) 50%,
+    transparent 80%,
+    var(--tip-accent, var(--gold))
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  transform: translateZ(-1px);
+}
+
+.orb-tip__logo,
+.orb-tip__body {
+  transition: transform 0.5s ease-in-out;
+  transform: translate3d(0, 0, 0);
+}
+
+.orb-tip.is-visible .orb-tip__card {
+  transform: rotate3d(0.5, 1, 0, 30deg);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    -18px 22px 44px rgba(0, 0, 0, 0.65),
+    0 0 36px var(--tip-glow, rgba(201, 168, 76, 0.45));
+}
+
+.orb-tip.is-visible .orb-tip__card::after {
+  opacity: 0.85;
+  animation: ring-spin 3s linear infinite;
+}
+
+.orb-tip.is-visible .orb-tip__logo {
+  transform: translate3d(0, 0, 50px);
+}
+
+.orb-tip.is-visible .orb-tip__body {
+  transform: translate3d(0, 0, 30px);
+}
+
+/* Round plate, identical for all three companies and for the sun. */
 .orb-tip__logo {
   display: flex;
   align-items: center;
@@ -691,7 +809,8 @@ main:focus {
   width: 44px;
   height: 44px;
   padding: 6px;
-  border-radius: 12px;
+  border-radius: 999px;
+  overflow: hidden;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(232, 238, 248, 0.92));
   border: 1.5px solid var(--tip-accent, var(--gold));
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
@@ -809,6 +928,174 @@ main:focus {
 }
 
 /* ------------------------------------------------------------------ */
+/* Send button — idle → sending → sent                                  */
+/* Gold surface on a dark-navy label. Hover: a slight scale, the plane  */
+/* tilts to 45° and a spinning gradient ring shows around the edge.     */
+/* Sending: the plane flies off right and shrinks away. Sent: a check   */
+/* drops in from 4× to 1× beside the "Sent" label.                       */
+/* ------------------------------------------------------------------ */
+@property --ring-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes ring-spin {
+  to {
+    --ring-angle: 360deg;
+  }
+}
+
+.send-btn {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 0 28px;
+  border-radius: 4px;
+  border: 0;
+  background: linear-gradient(180deg, #d9b95c 0%, var(--gold) 55%, #b8963f 100%);
+  color: var(--navy-deep);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  isolation: isolate;
+  transform: scale(1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 4px 14px rgba(201, 168, 76, 0.25);
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease;
+}
+
+/* Animated gradient ring — sits just outside the edge, hidden until hover. */
+.send-btn::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: -1;
+  border-radius: 7px;
+  background: conic-gradient(
+    from var(--ring-angle),
+    var(--gold) 0%,
+    #fff2c2 20%,
+    var(--gold) 40%,
+    var(--navy) 55%,
+    var(--gold) 70%,
+    #fff2c2 85%,
+    var(--gold) 100%
+  );
+  opacity: 0;
+  filter: blur(0.5px);
+  transition: opacity 0.35s ease;
+}
+
+.send-btn:hover:not(:disabled),
+.send-btn:focus-visible {
+  transform: scale(1.02);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.4) inset,
+    0 10px 28px rgba(201, 168, 76, 0.38);
+}
+
+.send-btn:hover:not(:disabled)::before,
+.send-btn:focus-visible::before {
+  opacity: 1;
+  animation: ring-spin 2.4s linear infinite;
+}
+
+.send-btn:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 3px;
+}
+
+.send-btn:disabled {
+  cursor: progress;
+}
+
+.send-btn[data-state="sent"]:disabled {
+  cursor: default;
+  background: linear-gradient(180deg, #34c98a 0%, #1f9c6b 60%, #167a53 100%);
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.3) inset,
+    0 8px 22px rgba(31, 156, 107, 0.35);
+}
+
+.send-btn__label {
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+}
+
+/* Paper plane */
+.send-btn__plane {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  transform: translateX(0) rotate(0deg) scale(1);
+  opacity: 1;
+  transition:
+    transform 0.55s cubic-bezier(0.55, 0, 0.1, 1),
+    opacity 0.45s ease;
+}
+
+.send-btn:hover:not(:disabled) .send-btn__plane {
+  transform: translateX(2px) rotate(45deg) scale(1);
+}
+
+.send-btn[data-state="sending"] .send-btn__plane {
+  transform: translateX(160px) rotate(45deg) scale(0);
+  opacity: 0;
+}
+
+.send-btn[data-state="sent"] .send-btn__plane {
+  display: none;
+}
+
+/* Checkmark */
+.send-btn__check {
+  position: absolute;
+  right: 22px;
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  transform: scale(4);
+  pointer-events: none;
+  transition:
+    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.3s ease;
+}
+
+.send-btn[data-state="sent"] .send-btn__check {
+  position: static;
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .send-btn,
+  .send-btn:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .send-btn::before {
+    animation: none;
+  }
+
+  .send-btn[data-state="sending"] .send-btn__plane {
+    transform: none;
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Reduced motion                                                      */
 /* ------------------------------------------------------------------ */
 @media (prefers-reduced-motion: reduce) {
@@ -823,5 +1110,18 @@ main:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .orb-tip.is-visible .orb-tip__card {
+    transform: none;
+  }
+
+  .orb-tip.is-visible .orb-tip__logo,
+  .orb-tip.is-visible .orb-tip__body {
+    transform: none;
+  }
+
+  .orb-tip__card::after {
+    animation: none;
   }
 }

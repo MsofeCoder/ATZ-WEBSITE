@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState, type MouseEvent } from "react";
 import type { Lang } from "@/lib/locales";
 import { LANGS } from "@/lib/locales";
+import { playLangCue, checkLangAudioAvailable } from "@/lib/lang-audio";
 
 /* ------------------------------------------------------------------ */
 /* Inline flag marks — no image requests, crisp at any DPR              */
@@ -53,16 +55,51 @@ interface LangToggleProps {
 }
 
 /**
- * EN / SW switch. A sliding navy pill marks the active language; each option
- * is a real link, so the switch works without JavaScript and keeps the
- * visitor on the same page in the other language.
+ * EN / SW switch, styled as a 3-D pill: a raised indicator slides along a
+ * recessed track and carries the active side's colour (gold for English,
+ * emerald for Swahili).
+ *
+ * Each option is a real link, so the switch works without JavaScript, keeps
+ * the visitor on the same page in the other language, and gives crawlers a
+ * followable hreflang pair. With JavaScript, a click first plays the spoken
+ * welcome for the chosen language — "Karibu" or "Welcome" — and the
+ * navigation follows once the cue has finished (the two locales are separate
+ * root layouts, so the switch is a full document load that would otherwise
+ * silence it). The indicator moves at once so the click feels instant.
  */
 export default function LangToggle({ lang, langHref, ariaLabel, onNavigate }: LangToggleProps) {
-  const activeIdx = LANGS.indexOf(lang);
+  // The side the visitor has chosen but not yet landed on.
+  const [pending, setPending] = useState<Lang | null>(null);
+  const shown = pending ?? lang;
+  const activeIdx = LANGS.indexOf(shown);
+
+  useEffect(() => {
+    checkLangAudioAvailable();
+  }, []);
+
+  const handleSelect = (target: Lang, href: string) => async (e: MouseEvent<HTMLAnchorElement>) => {
+    onNavigate?.();
+    if (target === lang || pending) {
+      if (pending) e.preventDefault();
+      return;
+    }
+    // Modified clicks (new tab, etc.) keep native link behaviour.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    setPending(target);
+    await playLangCue(target);
+    window.location.assign(href);
+  };
 
   return (
-    <div className="lang-toggle" role="group" aria-label={ariaLabel}>
-      {/* Sliding pill indicator */}
+    <div
+      className="lang-toggle"
+      role="group"
+      aria-label={ariaLabel}
+      data-active={shown}
+      data-pending={pending ? "true" : undefined}
+    >
+      {/* Sliding raised indicator */}
       <span
         className="lang-toggle__pill"
         style={{ transform: `translateX(${activeIdx * 100}%)` }}
@@ -71,17 +108,18 @@ export default function LangToggle({ lang, langHref, ariaLabel, onNavigate }: La
 
       {LANGS.map((l) => {
         const { label, shortLabel, Flag } = LANG_META[l];
-        const isActive = l === lang;
+        const isActive = l === shown;
+        const href = langHref(l);
 
         return (
           <Link
             key={l}
-            href={langHref(l)}
+            href={href}
             hrefLang={l}
             lang={l}
             title={label}
-            onClick={onNavigate}
-            aria-current={isActive ? "true" : undefined}
+            onClick={handleSelect(l, href)}
+            aria-current={l === lang ? "true" : undefined}
             className={`lang-toggle__option ${isActive ? "lang-toggle__option--active" : ""}`}
           >
             <span className="lang-toggle__flag" aria-hidden="true">

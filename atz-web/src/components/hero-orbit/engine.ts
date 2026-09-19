@@ -297,7 +297,17 @@ export function createOrbitEngine({
           ctx.arc(R, R, R * 0.8, 0, Math.PI * 2);
           ctx.stroke();
         }
-        ctx.drawImage(logo, 0, 0);
+        if (plate) {
+          // Same round mask as the planet badges, inside the navy ring.
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(256, 256, 256 * 0.74, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(logo, 0, 0);
+          ctx.restore();
+        } else {
+          ctx.drawImage(logo, 0, 0);
+        }
         const tex = track(new T.CanvasTexture(c));
         tex.colorSpace = T.SRGBColorSpace;
         tex.anisotropy = 4;
@@ -392,7 +402,15 @@ export function createOrbitEngine({
           const s = Math.min(boxSize / img.width, boxSize / img.height);
           const lw = img.width * s,
             lh = img.height * s;
+          // Clip to the inside of the accent ring: whatever the source image
+          // is — square, wordmark, stray background — every badge is the same
+          // round chip, so the three companies read as one set.
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(R, R, R - 25, 0, Math.PI * 2);
+          ctx.clip();
           ctx.drawImage(probe, (SIZE - lw) / 2, (SIZE - lh) / 2, lw, lh);
+          ctx.restore();
         }
         const tex = track(new T.CanvasTexture(c));
         tex.colorSpace = T.SRGBColorSpace;

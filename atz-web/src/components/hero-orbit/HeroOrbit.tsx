@@ -174,12 +174,13 @@ export default function HeroOrbit({
     }
   }, []);
 
+  // `is-visible` drives the card's 3-D tilt-in (see .orb-tip in globals.css);
+  // opacity is set inline so the fade and the tilt start on the same frame.
   const setTooltip = (key: BodyId, visible: boolean) => {
     if (key === "sun") {
-      if (sunTipRef.current) sunTipRef.current.style.opacity = visible ? "1" : "0";
+      showTip(sunTipRef.current, visible);
     } else {
-      const tip = tipRefs.current.get(key);
-      if (tip) tip.style.opacity = visible ? "1" : "0";
+      showTip(tipRefs.current.get(key), visible);
       planetRefs.current.get(key)?.classList.toggle("is-orbit-hot", visible);
     }
   };
@@ -653,6 +654,13 @@ export default function HeroOrbit({
       </AnimatePresence>
     </div>
   );
+}
+
+/** Fade a hover card in or out and start/stop its 3-D tilt on the same frame. */
+function showTip(tip: HTMLElement | null | undefined, visible: boolean) {
+  if (!tip) return;
+  tip.style.opacity = visible ? "1" : "0";
+  tip.classList.toggle("is-visible", visible);
 }
 
 /**

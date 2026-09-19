@@ -271,6 +271,7 @@ const en = {
     detailsPh: "What are you building, and what does success look like?",
     send: "Send Request",
     sending: "Sending…",
+    sent: "Sent",
     consent:
       "We use these details only to reply to your enquiry. See our Privacy Policy, or ask us to delete your details at",
     errRequired: "Please fill in your name and a valid email address.",

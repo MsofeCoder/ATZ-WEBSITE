@@ -12,13 +12,16 @@ import type { ConsultationPreset } from "@/components/providers/ConsultationProv
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import WhatsAppIcon from "@/components/icons/WhatsApp";
-import ArrowRight from "@/components/icons/ArrowRight";
+import SendButton, { type SendState } from "@/components/SendButton";
 import CloseIcon from "@/components/icons/Close";
 
 type Status =
   | { kind: "idle" }
   | { kind: "error"; msg: string; showFallback?: boolean }
   | { kind: "success"; name: string; service: string; devOnly: boolean };
+
+/** How long the "Sent" state shows before the confirmation panel takes over. */
+const SENT_BEAT_MS = 1100;
 
 const FIELD =
   "w-full rounded-sm border border-navy/20 bg-white px-3.5 py-3 text-sm text-navy transition focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/40";
@@ -41,7 +44,9 @@ export default function ConsultationModal({
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
-  const [sending, setSending] = useState(false);
+  // idle → sending → sent, then the success panel replaces the form. The
+  // "sent" beat gives the checkmark time to land before the swap.
+  const [phase, setPhase] = useState<SendState>("idle");
   const titleId = useId();
   const descId = useId();
   // Recorded at mount so the server can reject submissions that arrive faster
@@ -65,7 +70,7 @@ export default function ConsultationModal({
     }
 
     setStatus({ kind: "idle" });
-    setSending(true);
+    setPhase("sending");
 
     // Captured once, before anything can fail: the fields the visitor typed,
     // as plain strings (the honeypot excluded).
@@ -99,7 +104,7 @@ export default function ConsultationModal({
         console.error(
           `[lead] /api/lead answered ${res.status}: ${
             res.status === 503
-              ? "no delivery backend configured (set LEAD_WEBHOOK_URL or RESEND_API_KEY in .env.local)"
+              ? "no delivery backend configured (set WEB3FORMS_ACCESS_KEY, LEAD_WEBHOOK_URL or RESEND_API_KEY in .env.local)"
               : "every configured backend failed"
           }. Lead kept in localStorage["atz:leads"] as ${vaultId}.`
         );
@@ -120,7 +125,7 @@ export default function ConsultationModal({
         console.warn(
           "%c[lead] DEV MODE — this request was NOT delivered anywhere.",
           "color:#c9a84c;font-weight:bold",
-          "\nThe server has no LEAD_WEBHOOK_URL / RESEND_API_KEY, so /api/lead only logged it to the terminal.",
+          "\nThe server has no WEB3FORMS_ACCESS_KEY / LEAD_WEBHOOK_URL / RESEND_API_KEY, so /api/lead only logged it to the terminal.",
           '\nA copy is in localStorage["atz:leads"] under id',
           vaultId,
           "\nFields:",
@@ -133,8 +138,11 @@ export default function ConsultationModal({
           `[lead] delivered — server id ${body.id ?? "?"}${body.degraded ? " (stored, notification failed)" : ""}`
         );
       }
+      setPhase("sent");
+      await new Promise((r) => setTimeout(r, SENT_BEAT_MS));
       setStatus({ kind: "success", name: fields.name ?? "", service, devOnly: Boolean(body.dev) });
       form.reset();
+      return;
     } catch {
       markLead(vaultId, "failed");
       console.error(
@@ -142,7 +150,7 @@ export default function ConsultationModal({
       );
       setStatus({ kind: "error", msg: dict.modal.errNetwork });
     } finally {
-      setSending(false);
+      setPhase("idle");
     }
   }
 
@@ -367,14 +375,14 @@ export default function ConsultationModal({
                 <input id="cf-gotcha" type="text" name="_gotcha" tabIndex={-1} autoComplete="off" />
               </div>
 
-              <button
-                type="submit"
-                disabled={sending}
-                className="bg-gold font-display text-navy-deep mt-1 flex w-full items-center justify-center gap-2.5 rounded-sm px-7 py-4 text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-              >
-                {sending ? dict.modal.sending : dict.modal.send}
-                {!sending && <ArrowRight />}
-              </button>
+              <SendButton
+                state={phase}
+                labels={{
+                  idle: dict.modal.send,
+                  sending: dict.modal.sending,
+                  sent: dict.modal.sent,
+                }}
+              />
 
               <p className="text-slate-ink/80 mt-3 text-center text-xs leading-relaxed">
                 {dict.modal.consent}{" "}

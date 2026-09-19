@@ -54,7 +54,9 @@ src/
   components/
     hero-orbit/     WebGL hero — engine.ts (three.js, no React), HeroOrbit.tsx
                     (React host + accessible overlay), OrbitDrawer.tsx
-    layout/         SiteHeader, SiteFooter, LocaleShell, SkipLink, JsonLd, WhatsAppFab
+    layout/         SiteHeader, SiteFooter, LocaleShell, SkipLink, JsonLd, WhatsAppFab,
+                    LangToggle (3-D pill; plays public/audio/{karibu,welcome}.mp3)
+    SendButton.tsx  animated submit: idle → sending → sent
     pages/          HomeView, ContactView, LegalView
     sections/       HomeSections, Approach
     providers/      ConsultationProvider — owns the single consultation dialog
@@ -109,10 +111,15 @@ rather than losing the enquiry.
 
 Delivery backends, configured via env (see `.env.example`):
 
-1. `LEAD_WEBHOOK_URL` — generic webhook (Formspree / Zapier / Make / custom)
-2. `RESEND_API_KEY` (+ `LEAD_NOTIFY_EMAIL`, `LEAD_FROM_EMAIL`) — email via Resend
+1. `WEB3FORMS_ACCESS_KEY` — email via [Web3Forms](https://web3forms.com)
+   (free tier, no visitor account; the recommended default)
+2. `LEAD_WEBHOOK_URL` — generic webhook (Formspree / Zapier / Make / custom)
+3. `RESEND_API_KEY` (+ `LEAD_NOTIFY_EMAIL`, `LEAD_FROM_EMAIL`) — email via Resend
 
-**With neither configured, production returns 503 and refuses the
+All keys are server-only: the browser posts to `/api/lead`, never to a third
+party, so no provider key is ever shipped in the client bundle.
+
+**With none configured, production returns 503 and refuses the
 submission.** There is deliberately no console-logging fallback: a log line
 nobody reads is not a delivery mechanism, and accepting an enquiry that will
 never reach anyone is worse than declining it. In development it logs and

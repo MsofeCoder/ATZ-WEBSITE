@@ -84,6 +84,48 @@ export async function deliverLead(lead: Lead): Promise<DeliveryReport> {
   let attempted = 0;
   let succeeded = 0;
 
+  // Web3Forms: emails the lead to the address the access key was issued for.
+  // The key is server-only — it never reaches the browser bundle — so the
+  // form still goes through /api/lead and keeps the origin check, rate
+  // limiter, honeypot and timing filter in front of it.
+  if (env.WEB3FORMS_ACCESS_KEY) {
+    attempted++;
+    const ok = await withRetry(
+      "web3forms",
+      async () => {
+        const res = await postJson("https://api.web3forms.com/submit", {
+          access_key: env.WEB3FORMS_ACCESS_KEY,
+          subject: `Consultation request — ${lead.company || lead.name}`,
+          from_name: "ATZ Website",
+          // Web3Forms reads these two for the notification's Reply-To.
+          name: lead.name,
+          email: lead.email,
+          company: lead.company || "—",
+          phone: lead.phone || "—",
+          service: lead.service || "—",
+          budget: lead.budget || "—",
+          timeline: lead.timeline || "—",
+          locale: lead.locale,
+          lead_id: lead.id,
+          received_at: lead.receivedAt,
+          message: leadAsText(lead),
+        });
+        // Web3Forms answers 200 with {success:false} for a bad key, so treat
+        // that as a permanent (4xx-class) failure rather than a success.
+        if (res.ok) {
+          const body = (await res
+            .clone()
+            .json()
+            .catch(() => ({}))) as { success?: boolean };
+          if (body.success === false) return new Response(null, { status: 422 });
+        }
+        return res;
+      },
+      failures
+    );
+    if (ok) succeeded++;
+  }
+
   if (env.LEAD_WEBHOOK_URL) {
     attempted++;
     if (await withRetry("webhook", () => postJson(env.LEAD_WEBHOOK_URL!, lead), failures)) {
