@@ -111,13 +111,17 @@ rather than losing the enquiry.
 
 Delivery backends, configured via env (see `.env.example`):
 
-1. `WEB3FORMS_ACCESS_KEY` — email via [Web3Forms](https://web3forms.com)
-   (free tier, no visitor account; the recommended default)
+1. `NEXT_PUBLIC_WEB3FORMS_KEY` — email via [Web3Forms](https://web3forms.com)
+   (free tier; the recommended default). Web3Forms' free tier only accepts
+   posts from the browser, so the page posts to `/api/lead` first (validation,
+   bot filters, storage) and then to Web3Forms itself when the server answers
+   `clientDelivery: true`. Web3Forms access keys are public by design.
 2. `LEAD_WEBHOOK_URL` — generic webhook (Formspree / Zapier / Make / custom)
 3. `RESEND_API_KEY` (+ `LEAD_NOTIFY_EMAIL`, `LEAD_FROM_EMAIL`) — email via Resend
+4. `WEB3FORMS_ACCESS_KEY` — server-side Web3Forms; Pro plan with the server IP
+   allow-listed only
 
-All keys are server-only: the browser posts to `/api/lead`, never to a third
-party, so no provider key is ever shipped in the client bundle.
+Backends 2–4 are server-only and never reach the client bundle.
 
 **With none configured, production returns 503 and refuses the
 submission.** There is deliberately no console-logging fallback: a log line

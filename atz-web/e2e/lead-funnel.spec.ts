@@ -316,16 +316,22 @@ test.describe("lead API contract", () => {
     // fast or slow cannot fail this the way an absolute timestamp did.
     //
     // The assertion is about *which* answer comes back, not that it succeeds.
-    // No delivery backend is configured under test, so a genuine lead is
-    // honestly refused with 503 — while a bot gets a fake 200 and learns
-    // nothing. Getting 200 here would mean this submission had been silently
-    // discarded as a bot, which is the bug being guarded against.
+    // A bot gets a bare `{ ok: true }` and learns nothing. A genuine lead is
+    // either accepted for real — a 200 that carries the server-issued `id`
+    // (a delivery backend such as NEXT_PUBLIC_WEB3FORMS_KEY is configured) —
+    // or honestly refused with 502/503 when nothing can deliver it. A bare
+    // 200 here would mean this submission had been silently discarded as a
+    // bot, which is the bug being guarded against.
     const res = await request.post("/api/lead", {
       data: { name: "Real Person", email: "person@example.com", _elapsed: 12_000 },
       headers: headers(baseURL!),
     });
-    expect(res.status(), "a human-paced lead must not be silently dropped").not.toBe(200);
-    expect([502, 503]).toContain(res.status());
+    if (res.status() === 200) {
+      const body = (await res.json()) as { id?: string };
+      expect(body.id, "a human-paced lead must not be silently dropped").toBeTruthy();
+    } else {
+      expect([502, 503]).toContain(res.status());
+    }
   });
 
   test("silently accepts a honeypot submission", async ({ request, baseURL }) => {

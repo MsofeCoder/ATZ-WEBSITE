@@ -8,6 +8,7 @@ import { EASE_OUT } from "@/components/motion/variants";
 import { waLink, fillTemplate, EMAIL, PHONE_DISPLAY } from "@/lib/site";
 import { isValidEmail } from "@/lib/validation";
 import { vaultLead, markLead } from "@/lib/lead-vault";
+import { postToWeb3Forms } from "@/lib/web3forms";
 import type { ConsultationPreset } from "@/components/providers/ConsultationProvider";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -104,7 +105,7 @@ export default function ConsultationModal({
         console.error(
           `[lead] /api/lead answered ${res.status}: ${
             res.status === 503
-              ? "no delivery backend configured (set WEB3FORMS_ACCESS_KEY, LEAD_WEBHOOK_URL or RESEND_API_KEY in .env.local)"
+              ? "no delivery backend configured (set NEXT_PUBLIC_WEB3FORMS_KEY, LEAD_WEBHOOK_URL or RESEND_API_KEY in .env.local)"
               : "every configured backend failed"
           }. Lead kept in localStorage["atz:leads"] as ${vaultId}.`
         );
@@ -117,7 +118,33 @@ export default function ConsultationModal({
         id?: string;
         dev?: boolean;
         degraded?: boolean;
+        /** Server validated + filtered; the browser must post to Web3Forms. */
+        clientDelivery?: boolean;
+        stored?: boolean;
       };
+
+      // Web3Forms free tier: the notification email is sent from here. If it
+      // fails and nothing server-side delivered or stored the lead, the
+      // visitor must be told — a success screen over a lost enquiry is the
+      // one outcome this form must never produce.
+      if (body.clientDelivery) {
+        const sent = await postToWeb3Forms({
+          id: body.id ?? vaultId,
+          locale: dict.meta.lang,
+          fields,
+        });
+        if (sent) {
+          body.degraded = false;
+        } else if (body.degraded || !body.stored) {
+          markLead(vaultId, "failed");
+          console.error(
+            `[lead] web3forms delivery failed and nothing else has the lead. Kept in localStorage["atz:leads"] as ${vaultId}.`
+          );
+          setStatus({ kind: "error", msg: dict.modal.errUnavailable, showFallback: true });
+          return;
+        }
+      }
+
       // Dev-mode acceptance is not delivery. Say so where a developer will
       // see it, and mark the vault entry accordingly.
       if (body.dev) {
@@ -125,7 +152,7 @@ export default function ConsultationModal({
         console.warn(
           "%c[lead] DEV MODE — this request was NOT delivered anywhere.",
           "color:#c9a84c;font-weight:bold",
-          "\nThe server has no WEB3FORMS_ACCESS_KEY / LEAD_WEBHOOK_URL / RESEND_API_KEY, so /api/lead only logged it to the terminal.",
+          "\nNo NEXT_PUBLIC_WEB3FORMS_KEY, LEAD_WEBHOOK_URL or RESEND_API_KEY is set, so /api/lead only logged it to the terminal.",
           '\nA copy is in localStorage["atz:leads"] under id',
           vaultId,
           "\nFields:",

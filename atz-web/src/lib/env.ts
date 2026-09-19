@@ -18,7 +18,16 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://atzcompany
 
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
+/**
+ * Web3Forms access key for *browser* submissions. Web3Forms designs these keys
+ * to be public (the free tier only accepts posts from the browser — server
+ * calls get a 403 unless the Pro plan allow-lists the server IP), so it is a
+ * NEXT_PUBLIC_ variable, inlined at build time. Empty string when unset.
+ */
+export const WEB3FORMS_PUBLIC_KEY = (process.env.NEXT_PUBLIC_WEB3FORMS_KEY ?? "").trim();
+
 const serverSchema = z.object({
+  /** Server-side Web3Forms — Pro plan with the server IP allow-listed only. */
   WEB3FORMS_ACCESS_KEY: z.string().min(1).optional(),
   LEAD_WEBHOOK_URL: z.url().optional(),
   RESEND_API_KEY: z.string().min(1).optional(),
@@ -32,10 +41,22 @@ export type ServerEnv = z.infer<typeof serverSchema>;
 
 let cached: ServerEnv | null = null;
 
+/**
+ * `.env.example` lists every variable, so an unused one is typically left as
+ * `NAME=` — which loads as "" and would fail `z.url()` / `z.email()`, taking
+ * the *whole* parse (and every valid key with it) down to defaults. Blank
+ * means unset.
+ */
+function withoutBlanks(env: NodeJS.ProcessEnv): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) if (v !== undefined && v.trim() !== "") out[k] = v;
+  return out;
+}
+
 /** Parsed server env. Falls back to defaults (never throws) so the app boots. */
 export function serverEnv(): ServerEnv {
   if (cached) return cached;
-  const parsed = serverSchema.safeParse(process.env);
+  const parsed = serverSchema.safeParse(withoutBlanks(process.env));
   if (!parsed.success) {
     console.error(
       "[env] invalid server environment; falling back to defaults:",
@@ -48,10 +69,15 @@ export function serverEnv(): ServerEnv {
   return cached;
 }
 
-/** True when at least one lead-delivery backend is configured. */
+/** True when at least one *server-side* lead-delivery backend is configured. */
 export function hasLeadDelivery(): boolean {
   const env = serverEnv();
   return Boolean(env.WEB3FORMS_ACCESS_KEY || env.LEAD_WEBHOOK_URL || env.RESEND_API_KEY);
+}
+
+/** True when the browser will deliver the lead itself (Web3Forms free tier). */
+export function hasClientDelivery(): boolean {
+  return WEB3FORMS_PUBLIC_KEY.length > 0;
 }
 
 /** True when Upstash Redis credentials are present (durable store + rate limit). */

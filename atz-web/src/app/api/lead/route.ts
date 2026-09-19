@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { leadSchema, MIN_FILL_MS, type Lead } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { deliverLead, hasLeadDelivery } from "@/lib/leads";
-import { SITE_URL, IS_PRODUCTION } from "@/lib/env";
+import { deliverLead, hasLeadDelivery, storeLead } from "@/lib/leads";
+import { SITE_URL, IS_PRODUCTION, hasClientDelivery } from "@/lib/env";
 
 export const runtime = "nodejs";
 /** Never cached — every call mutates state. */
@@ -105,9 +105,19 @@ export async function POST(req: Request) {
     locale: input.locale,
   };
 
+  // Browser-side delivery (Web3Forms free tier): the server has done the
+  // validation and bot filtering; the client posts the lead to Web3Forms next.
+  // `clientDelivery` tells it to. Stored first when a store exists, so a
+  // failed browser post still leaves a record.
+  const clientDelivery = hasClientDelivery();
+
   // No delivery backend configured: refuse rather than accept a lead that
   // nobody will ever read. A console log is not a delivery mechanism.
   if (!hasLeadDelivery()) {
+    if (clientDelivery) {
+      const stored = await storeLead(lead);
+      return NextResponse.json({ ok: true, id: lead.id, clientDelivery, stored });
+    }
     if (IS_PRODUCTION) {
       console.error("[lead] no delivery backend configured — refusing", { id: lead.id });
       return NextResponse.json({ error: "unavailable" }, { status: 503 });
@@ -126,7 +136,15 @@ export async function POST(req: Request) {
     });
     // Stored but undeliverable is still a captured lead — tell the visitor it
     // landed. Neither stored nor delivered is a genuine failure.
-    if (report.stored) return NextResponse.json({ ok: true, id: lead.id, degraded: true });
+    if (report.stored || clientDelivery) {
+      return NextResponse.json({
+        ok: true,
+        id: lead.id,
+        degraded: true,
+        clientDelivery,
+        stored: report.stored,
+      });
+    }
     return NextResponse.json({ error: "delivery_failed" }, { status: 502 });
   }
 
@@ -134,7 +152,7 @@ export async function POST(req: Request) {
     console.warn("[lead] partial delivery", { id: lead.id, failures: report.failures });
   }
 
-  return NextResponse.json({ ok: true, id: lead.id });
+  return NextResponse.json({ ok: true, id: lead.id, clientDelivery, stored: report.stored });
 }
 
 /** Explicitly reject everything else rather than returning Next's 405 page. */

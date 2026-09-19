@@ -50,7 +50,9 @@ export function proxy(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com",
+    // api.web3forms.com: the free tier only accepts browser submissions, so the
+    // lead is posted from the client after /api/lead has accepted it.
+    "connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com https://api.web3forms.com",
     "frame-ancestors 'none'",
     "form-action 'self'",
     "base-uri 'self'",
