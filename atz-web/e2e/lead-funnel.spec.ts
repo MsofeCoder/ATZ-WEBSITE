@@ -5,10 +5,9 @@ const SEND = /Send Request|Tuma Ombi/i;
 
 async function openModal(page: Page) {
   await page.goto("/");
-  // The header CTA is hidden on mobile behind the menu toggle.
-  const menu = page.getByRole("button", { name: /open menu/i });
-  if (await menu.isVisible()) await menu.click();
-  await page.getByRole("button", { name: CTA }).first().click();
+  // The header and hero CTAs route to the scope card on the home page; the
+  // CTA band's button is the one that opens the dialog directly.
+  await page.locator("#contact-cta").getByRole("button", { name: CTA }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   return dialog;
@@ -101,7 +100,10 @@ test.describe("hero orbit drawer", () => {
     // 882px behind it.
     const { scrollBefore } = await openDrawer(page);
     await page.waitForTimeout(900); // long enough for a smooth scroll to run
-    expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(scrollBefore);
+    // Sub-pixel layout can round differently once the scroll lock is on; the
+    // regression this guards was hundreds of pixels, so allow a hairline.
+    const scrollAfter = await page.evaluate(() => Math.round(window.scrollY));
+    expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThanOrEqual(2);
   });
 
   /**

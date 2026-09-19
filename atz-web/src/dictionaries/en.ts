@@ -69,12 +69,13 @@ const en = {
   },
   wa: {
     /** Opener typed into WhatsApp from every generic CTA. */
-    general: "Hello ATZ Team, I am interested in learning more about your services.",
+    general: "Hello ATZ Team! I would like to inquire about your services.",
     /** After the form: {name} and {service} are filled from the submission. */
     afterSubmit: "Hi ATZ, my name is {name}. I just submitted a request regarding {service}.",
-    /** From the scope card: {engine}, {type}, {budget}, {timeline}. */
+    /** From the scope card: {engine}, {project} (may be empty), {budget}, {timeline}. */
     scope:
-      "Hello ATZ Team, I would like to scope a project.\nEngine: {engine}\nProject: {type}\nBudget: {budget}\nTimeline: {timeline}",
+      "Hi ATZ, I just scoped a project:\n- Engine: {engine}{project}\n- Budget: {budget}\n- Timeline: {timeline}",
+    scopeProject: "\n- Project: {type}",
   },
   trust: {
     based: "Tanzania-based",

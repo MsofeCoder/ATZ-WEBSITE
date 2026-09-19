@@ -30,11 +30,10 @@ test.describe("accessibility", () => {
 
   test("the consultation dialog is accessible when open", async ({ page }) => {
     await page.goto("/");
-    const menu = page.getByRole("button", { name: /open menu/i });
-    if (await menu.isVisible()) await menu.click();
+    // Header and hero CTAs route to the scope card; the CTA band opens the dialog.
     await page
+      .locator("#contact-cta")
       .getByRole("button", { name: /Request a Consultation/i })
-      .first()
       .click();
     await expect(page.getByRole("dialog")).toBeVisible();
 

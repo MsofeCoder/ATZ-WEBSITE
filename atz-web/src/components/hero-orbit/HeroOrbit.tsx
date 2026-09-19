@@ -201,7 +201,12 @@ export default function HeroOrbit({
   }, []);
   const activate = useCallback(
     (key: BodyId, pointerType: string | undefined) => {
-      if (pointerType === "touch" && armedRef.current !== key) {
+      // Phones (< 768px) select on a single tap: the static chips already
+      // carry their logos, and a two-step tap there felt broken. The
+      // label-then-open pattern stays for tablets, where bodies are small
+      // relative to a finger and the card is worth previewing.
+      const phone = window.matchMedia("(max-width: 767px)").matches;
+      if (pointerType === "touch" && !phone && armedRef.current !== key) {
         disarm();
         armedRef.current = key;
         setTooltip(key, true);
@@ -620,7 +625,13 @@ export default function HeroOrbit({
         })}
       </div>
 
-      {/* Motion control — only meaningful once the scene actually moves. */}
+      {/* Interaction hint + motion control, stacked bottom-right. Both only
+          mean something once the scene actually moves. */}
+      {scene === "webgl" && (
+        <p className="orbit-hint" aria-hidden="true">
+          {dict.hero.orbitHint}
+        </p>
+      )}
       {scene === "webgl" && (
         <button
           type="button"

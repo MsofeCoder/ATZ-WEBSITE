@@ -22,8 +22,7 @@ export function fillTemplate(template: string, vars: Record<string, string>): st
   return template.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? "");
 }
 
-export const WA_GENERIC_MESSAGE =
-  "Hello ATZ Team, I am interested in learning more about your services.";
+export const WA_GENERIC_MESSAGE = "Hello ATZ Team! I would like to inquire about your services.";
 export const WA_URL = waLink(WA_GENERIC_MESSAGE);
 export const EMAIL = "info@atzcompany.co.tz";
 export const LOCALITY = "Morogoro";

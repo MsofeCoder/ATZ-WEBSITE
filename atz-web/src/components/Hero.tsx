@@ -12,6 +12,7 @@ import { staggerContainer, staggerItem } from "@/components/motion/variants";
 import WhatsAppIcon from "@/components/icons/WhatsApp";
 import ArrowRight from "@/components/icons/ArrowRight";
 import TrustBadges from "@/components/TrustBadges";
+import { goToScope } from "@/lib/scope-routing";
 
 /**
  * The hero.
@@ -137,7 +138,7 @@ export default function Hero({ dict }: { dict: Dict }) {
               <m.div variants={staggerItem} className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => openConsultation()}
+                  onClick={() => goToScope(() => openConsultation())}
                   className="btn-primary font-display inline-flex min-h-12 items-center gap-2.5 px-7 py-3.5 text-sm font-extrabold tracking-[0.01em]"
                 >
                   {dict.nav.cta}
@@ -159,11 +160,6 @@ export default function Hero({ dict }: { dict: Dict }) {
               <m.div variants={staggerItem} className="mt-4">
                 <TrustBadges dict={dict} tone="dark" />
               </m.div>
-
-              {/* Orbit interaction hint — desktop only, aria-hidden */}
-              <m.p variants={staggerItem} className="orbit-hint hidden lg:block" aria-hidden="true">
-                {dict.hero.orbitHint}
-              </m.p>
             </m.div>
           </div>
 

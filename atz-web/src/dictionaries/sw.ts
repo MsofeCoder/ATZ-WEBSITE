@@ -64,10 +64,11 @@ const sw: Dict = {
       "Mchoro wa mzunguko: ATZ Company Limited katikati, na Msofe Designer, Adam Intelligence na Msofe Coder zikiizunguka.",
   },
   wa: {
-    general: "Habari Timu ya ATZ, ningependa kujua zaidi kuhusu huduma zenu.",
+    general: "Habari Timu ya ATZ! Ningependa kuuliza kuhusu huduma zenu.",
     afterSubmit: "Habari ATZ, jina langu ni {name}. Nimetuma ombi kuhusu {service}.",
     scope:
-      "Habari Timu ya ATZ, ningependa kupanga mradi.\nInjini: {engine}\nMradi: {type}\nBajeti: {budget}\nMuda: {timeline}",
+      "Habari ATZ, nimepanga mradi:\n- Injini: {engine}{project}\n- Bajeti: {budget}\n- Muda: {timeline}",
+    scopeProject: "\n- Mradi: {type}",
   },
   trust: {
     based: "Tupo Tanzania",

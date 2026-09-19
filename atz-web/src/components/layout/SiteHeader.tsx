@@ -12,12 +12,15 @@ import { useConsultation } from "@/components/providers/ConsultationProvider";
 import LangToggle from "@/components/layout/LangToggle";
 import ScrollProgress from "@/components/motion/ScrollProgress";
 import { EASE_OUT, PRESS } from "@/components/motion/variants";
+import { goToScope } from "@/lib/scope-routing";
 
 export default function SiteHeader({ dict, lang }: { dict: Dict; lang: Lang }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname() ?? localePath(lang, "/");
   const { open: openConsultation } = useConsultation();
   const menuId = useId();
+  /** Scope card when it exists on this page, dialog otherwise. */
+  const requestConsultation = () => goToScope(() => openConsultation());
 
   // Elevate the bar once the page has scrolled under it. Read through a
   // motion value rather than a scroll listener so it costs nothing per frame
@@ -111,11 +114,11 @@ export default function SiteHeader({ dict, lang }: { dict: Dict; lang: Lang }) {
           {langToggle()}
           <m.button
             type="button"
-            onClick={() => openConsultation()}
+            onClick={requestConsultation}
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             transition={PRESS}
-            className="bg-navy font-display hover:bg-gold hover:text-navy-deep min-h-11 rounded-sm px-5 py-2.5 text-sm font-bold text-white transition-colors"
+            className="bg-navy font-display hover:bg-navy-deep min-h-11 rounded-sm border border-amber-500/40 px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_0_rgba(234,179,8,0)] transition-all hover:border-amber-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.25)]"
           >
             {dict.nav.cta}
           </m.button>
@@ -181,7 +184,7 @@ export default function SiteHeader({ dict, lang }: { dict: Dict; lang: Lang }) {
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  openConsultation();
+                  requestConsultation();
                 }}
                 whileTap={{ scale: 0.97 }}
                 transition={PRESS}

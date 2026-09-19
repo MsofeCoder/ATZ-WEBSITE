@@ -7,6 +7,7 @@ import { BRANDS, SUN, type BrandId } from "@/lib/brands";
 import { waLink, fillTemplate } from "@/lib/site";
 import { useConsultation } from "@/components/providers/ConsultationProvider";
 import { EASE_OUT } from "@/components/motion/variants";
+import { SCOPE_ID } from "@/lib/scope-routing";
 import Reveal from "@/components/Reveal";
 import WhatsAppIcon from "@/components/icons/WhatsApp";
 import ArrowRight from "@/components/icons/ArrowRight";
@@ -79,7 +80,7 @@ export default function ScopeEstimator({ dict }: { dict: Dict }) {
     ? waLink(
         fillTemplate(dict.wa.scope, {
           engine: dict.scope.engines[engine].label,
-          type: type ?? "—",
+          project: type ? fillTemplate(dict.wa.scopeProject, { type }) : "",
           budget,
           timeline,
         })
@@ -101,7 +102,8 @@ export default function ScopeEstimator({ dict }: { dict: Dict }) {
   return (
     <Reveal className="mt-16">
       <div
-        className="border-navy/10 relative overflow-hidden rounded-2xl border bg-white shadow-[0_24px_60px_rgba(27,42,74,0.10)]"
+        id={SCOPE_ID}
+        className="border-navy/10 relative scroll-mt-24 overflow-hidden rounded-2xl border bg-white shadow-[0_24px_60px_rgba(27,42,74,0.10)]"
         style={{ "--scope-a": accent, "--scope-ink": ink } as React.CSSProperties}
       >
         {/* Accent rail follows the chosen engine. */}
