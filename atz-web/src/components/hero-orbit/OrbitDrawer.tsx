@@ -99,16 +99,19 @@ export default function OrbitDrawer({
             bottom edge — it used to be clipped at 600px tall with no
             indication there was anything below it. */}
         <div className="min-h-0 flex-1 overflow-y-auto px-[30px] pt-8 pb-6">
+          {/* Round plate. `overflow-hidden` is what actually enforces the
+              circle: a square source (or one with its own background) is
+              clipped at the disc instead of poking past it. */}
           <div
-            className="mb-5 flex h-[88px] w-[88px] items-center justify-center rounded-full bg-white p-3"
-            style={{ boxShadow: "0 0 0 4px rgba(248,249,250,0.06)" }}
+            className="relative mb-5 h-[88px] w-[88px] overflow-hidden rounded-full border-2 border-white/10 bg-white p-3"
+            style={{ boxShadow: `0 0 0 4px rgba(248,249,250,0.06), 0 0 18px ${meta.glow}` }}
           >
             <Image
               src={meta.logo}
               alt=""
               width={88}
               height={88}
-              className="h-full w-full object-contain"
+              className="h-full w-full rounded-full object-contain"
             />
           </div>
           <p

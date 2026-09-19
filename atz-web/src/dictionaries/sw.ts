@@ -34,6 +34,7 @@ const sw: Dict = {
     primaryNav: "Menyu kuu",
     footerNav: "Menyu ya chini",
     whatsapp: "Wasiliana na ATZ kwa WhatsApp",
+    loading: "Inapakia",
   },
   nav: {
     companies: "Kampuni Zetu",

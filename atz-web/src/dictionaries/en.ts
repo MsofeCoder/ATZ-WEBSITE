@@ -38,6 +38,7 @@ const en = {
     primaryNav: "Primary",
     footerNav: "Footer",
     whatsapp: "Chat with ATZ on WhatsApp",
+    loading: "Loading",
   },
   nav: {
     companies: "Our Companies",

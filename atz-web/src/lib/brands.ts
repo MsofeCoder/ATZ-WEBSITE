@@ -70,7 +70,9 @@ export const BRANDS: Record<BrandId, Brand> = {
     id: "ai",
     name: "Adam Intelligence",
     url: "https://adamuintelligence.github.io/portfolio/",
-    logo: "/brand-logos/ai-logo.png",
+    // Renamed when re-cut with a transparent ground, so browsers that cached
+    // the old white-background ai-logo.png cannot show it.
+    logo: "/brand-logos/ai-mark.png",
     accent: "#2b8cff",
     accentInk: "#1b63d6",
     accentBright: "#35d0f0",

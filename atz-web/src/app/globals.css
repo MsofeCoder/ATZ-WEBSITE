@@ -1093,6 +1093,39 @@ main:focus {
     transform: none;
     opacity: 0;
   }
+
+  .atz-dash {
+    animation: none;
+    stroke-dashoffset: 0;
+    fill: currentColor;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Route loader — "ATZ" drawn as an SVG stroke                          */
+/* Each <tspan> starts fully "dashed out" (offset = dash length) and    */
+/* the offset is pulled to 0, so the outline appears to be drawn by a   */
+/* pen; the glyph then fills with its brand colour. Alternate direction */
+/* undraws it again while the route is still streaming.                 */
+/* ------------------------------------------------------------------ */
+.atz-dash {
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  animation: draw-stroke 3s ease-in-out infinite alternate;
+}
+
+@keyframes draw-stroke {
+  0% {
+    stroke-dashoffset: 400;
+    fill: transparent;
+  }
+  40% {
+    fill: transparent;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    fill: currentColor;
+  }
 }
 
 /* ------------------------------------------------------------------ */

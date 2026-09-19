@@ -18,7 +18,7 @@ export const LANG_AUDIO: Record<Lang, string> = {
 };
 
 /** Upper bound on how long the switch waits for the clip. */
-const MAX_WAIT_MS = 3000;
+const MAX_WAIT_MS = 3500;
 
 /**
  * Plays the cue for `lang`. Resolves on `ended`, on any error (file missing,
