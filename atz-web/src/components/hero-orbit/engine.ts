@@ -211,8 +211,42 @@ export function createOrbitEngine({
     return track(tex);
   };
 
-  /** Loads an image and returns a Three.js texture with keyed-out white background. */
-  const makeLogoTexture = (logoUrl: string): Promise<THREE.Texture> =>
+  /**
+   * Knocks out a white background in place, if the canvas has one (all four
+   * corners white). Soft ramp between 205 and 235 keeps anti-aliased edges.
+   */
+  const keyOutWhite = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+    const corners: [number, number][] = [
+      [0, 0],
+      [w - 1, 0],
+      [0, h - 1],
+      [w - 1, h - 1],
+    ];
+    const hasWhite = corners.every(([x, y]) => {
+      const [r, g, b, a] = ctx.getImageData(x, y, 1, 1).data;
+      return a > 200 && r > 225 && g > 225 && b > 225;
+    });
+    if (!hasWhite) return;
+    const idata = ctx.getImageData(0, 0, w, h);
+    const d = idata.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] === 0) continue;
+      const min = Math.min(d[i], d[i + 1], d[i + 2]);
+      if (min > 235) d[i + 3] = 0;
+      else if (min > 205) {
+        d[i + 3] = Math.round(d[i + 3] * Math.max(0, Math.min(1, (235 - min) / 30)));
+      }
+    }
+    ctx.putImageData(idata, 0, 0);
+  };
+
+  /**
+   * Loads an image and returns a Three.js texture with the white background
+   * keyed out. With `plate`, the mark is set on a soft cream disc with a
+   * navy ring first: the ATZ logo is navy and gold, and painted straight
+   * onto the gold star its gold half simply vanished.
+   */
+  const makeLogoTexture = (logoUrl: string, plate = false): Promise<THREE.Texture> =>
     new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
@@ -221,33 +255,49 @@ export function createOrbitEngine({
         c.width = 512;
         c.height = 512;
         const ctx = c.getContext("2d")!;
-        const scale = Math.min(512 / img.width, 512 / img.height);
+        // The logo is keyed on a scratch canvas so the plate underneath is
+        // never mistaken for background and knocked out.
+        const logo = document.createElement("canvas");
+        logo.width = logo.height = 512;
+        const lctx = logo.getContext("2d")!;
+        const box = plate ? 512 * 0.6 : 512;
+        const scale = Math.min(box / img.width, box / img.height);
         const w = img.width * scale;
         const h = img.height * scale;
-        ctx.drawImage(img, (512 - w) / 2, (512 - h) / 2, w, h);
-        const corners: [number, number][] = [
-          [0, 0],
-          [511, 0],
-          [0, 511],
-          [511, 511],
-        ];
-        const hasWhite = corners.every(([x, y]) => {
-          const [r, g, b, a] = ctx.getImageData(x, y, 1, 1).data;
-          return a > 200 && r > 225 && g > 225 && b > 225;
-        });
-        if (hasWhite) {
-          const idata = ctx.getImageData(0, 0, 512, 512);
-          const d = idata.data;
-          for (let i = 0; i < d.length; i += 4) {
-            if (d[i + 3] === 0) continue;
-            const min = Math.min(d[i], d[i + 1], d[i + 2]);
-            if (min > 235) d[i + 3] = 0;
-            else if (min > 205) {
-              d[i + 3] = Math.round(d[i + 3] * Math.max(0, Math.min(1, (235 - min) / 30)));
-            }
-          }
-          ctx.putImageData(idata, 0, 0);
+        lctx.drawImage(img, (512 - w) / 2, (512 - h) / 2, w, h);
+        keyOutWhite(lctx, 512, 512);
+        if (plate) {
+          const R = 256;
+          // Soft shadow under the plate so it lifts off the surface.
+          ctx.save();
+          ctx.shadowColor = "rgba(20, 14, 0, 0.45)";
+          ctx.shadowBlur = 28;
+          ctx.shadowOffsetY = 6;
+          ctx.fillStyle = "#f6efd9";
+          ctx.beginPath();
+          ctx.arc(R, R, R * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          const g = ctx.createRadialGradient(R * 0.86, R * 0.78, R * 0.1, R, R, R * 0.8);
+          g.addColorStop(0, "#ffffff");
+          g.addColorStop(0.7, "#f7f1de");
+          g.addColorStop(1, "#e6d8ad");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(R, R, R * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(27, 42, 74, 0.9)";
+          ctx.lineWidth = 9;
+          ctx.beginPath();
+          ctx.arc(R, R, R * 0.76, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(255, 244, 200, 0.9)";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(R, R, R * 0.8, 0, Math.PI * 2);
+          ctx.stroke();
         }
+        ctx.drawImage(logo, 0, 0);
         const tex = track(new T.CanvasTexture(c));
         tex.colorSpace = T.SRGBColorSpace;
         tex.anisotropy = 4;
@@ -276,6 +326,17 @@ export function createOrbitEngine({
         const c = document.createElement("canvas");
         c.width = c.height = SIZE;
         const ctx = c.getContext("2d")!;
+        // Drop shadow first, so the plate reads as a chip floating over the
+        // planet rather than a flat decal on the star field.
+        ctx.save();
+        ctx.shadowColor = "rgba(0, 0, 0, 0.55)";
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetY = 5;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(R, R, R - 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         // Light circular plate
         const plate = ctx.createRadialGradient(R, R * 0.82, R * 0.1, R, R, R);
         plate.addColorStop(0, "#ffffff");
@@ -283,20 +344,21 @@ export function createOrbitEngine({
         plate.addColorStop(1, "#dfe6f2");
         ctx.fillStyle = plate;
         ctx.beginPath();
-        ctx.arc(R, R, R - 8, 0, Math.PI * 2);
+        ctx.arc(R, R, R - 14, 0, Math.PI * 2);
         ctx.fill();
-        // Accent ring
-        const ac = new T.Color(accentHex);
-        ctx.strokeStyle = `rgba(${Math.round(ac.r * 255)},${Math.round(ac.g * 255)},${Math.round(ac.b * 255)},0.95)`;
-        ctx.lineWidth = 8;
+        // Accent ring — full strength, wider than before, so the chip carries
+        // its brand colour at a glance.
+        const ac = new T.Color(accentHex).convertLinearToSRGB();
+        ctx.strokeStyle = `rgb(${Math.round(ac.r * 255)},${Math.round(ac.g * 255)},${Math.round(ac.b * 255)})`;
+        ctx.lineWidth = 11;
         ctx.beginPath();
-        ctx.arc(R, R, R - 12, 0, Math.PI * 2);
+        ctx.arc(R, R, R - 19, 0, Math.PI * 2);
         ctx.stroke();
-        // Dark outer edge
-        ctx.strokeStyle = "rgba(6,10,22,0.55)";
+        // Dark outer hairline separates the chip from bright planet rims.
+        ctx.strokeStyle = "rgba(6,10,22,0.7)";
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(R, R, R - 4, 0, Math.PI * 2);
+        ctx.arc(R, R, R - 13, 0, Math.PI * 2);
         ctx.stroke();
         // Logo — keyed-out white bg
         if (img.width > 0) {
@@ -475,7 +537,7 @@ export function createOrbitEngine({
   medallion.raycast = () => {};
   sunGroup.add(medallion);
 
-  makeLogoTexture(SUN.logo).then((tex) => {
+  makeLogoTexture(SUN.logo, true).then((tex) => {
     medallionMat.map = tex;
     medallionMat.needsUpdate = true;
   });
@@ -725,8 +787,8 @@ export function createOrbitEngine({
     const badge = new T.Sprite(badgeMat);
     badge.name = `badge-${brand.id}`;
     badge.raycast = () => {};
-    badge.position.set(0, brand.bodyRadius * 1.5, 0);
-    badge.scale.setScalar(brand.bodyRadius * 1.35);
+    badge.position.set(0, brand.bodyRadius * 1.62, 0);
+    badge.scale.setScalar(brand.bodyRadius * 1.7);
     carrier.add(badge);
 
     // Build badge texture asynchronously
@@ -1165,7 +1227,7 @@ export function createOrbitEngine({
 
       // Badge scale eases in sync
       const bBodyR = BRAND_LIST.find((b) => b.id === p.key)?.bodyRadius ?? 1;
-      const badgeTarget = bBodyR * 1.35 * (1 + p.highlight * 0.14);
+      const badgeTarget = bBodyR * 1.7 * (1 + p.highlight * 0.14);
       const bs = p.badge.scale.x;
       const bns = bs + (badgeTarget - bs) * 0.18;
       p.badge.scale.setScalar(bns);

@@ -8,7 +8,7 @@ import HeroOrbit from "@/components/hero-orbit/HeroOrbit";
 import CountUp from "@/components/CountUp";
 import { useConsultation } from "@/components/providers/ConsultationProvider";
 import { useEntrance } from "@/components/motion/useEntrance";
-import { PRESS, staggerContainer, staggerItem } from "@/components/motion/variants";
+import { staggerContainer, staggerItem } from "@/components/motion/variants";
 import WhatsAppIcon from "@/components/icons/WhatsApp";
 import ArrowRight from "@/components/icons/ArrowRight";
 
@@ -130,31 +130,27 @@ export default function Hero({ dict }: { dict: Dict }) {
                 {dict.hero.sub}
               </m.p>
 
-              {/* CTA action buttons */}
+              {/* CTA action buttons. Plain elements: their hover choreography
+                  lives in CSS (.btn-primary / .btn-secondary), and a motion
+                  `whileHover` transform would overwrite it inline. */}
               <m.div variants={staggerItem} className="flex flex-wrap items-center gap-3">
-                <m.button
+                <button
                   type="button"
                   onClick={openConsultation}
-                  whileHover={{ y: -2, scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={PRESS}
-                  className="cta-glow font-display text-navy-deep inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-[#D4AF37] to-[#C9A84C] px-7 py-3.5 text-sm font-extrabold shadow-[0_4px_20px_rgba(201,168,76,0.35)] transition-shadow duration-200 hover:shadow-[0_8px_28px_rgba(201,168,76,0.5)]"
+                  className="btn-primary font-display inline-flex min-h-12 items-center gap-2.5 px-7 py-3.5 text-sm font-extrabold tracking-[0.01em]"
                 >
                   {dict.nav.cta}
                   <ArrowRight />
-                </m.button>
-                <m.a
+                </button>
+                <a
                   href={WA_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={PRESS}
-                  className="font-display inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-950/40 px-5 py-3.5 text-sm font-bold text-emerald-300 shadow-sm backdrop-blur-sm transition-colors duration-200 hover:border-emerald-400 hover:bg-emerald-900/60 hover:text-white"
+                  className="btn-secondary font-display inline-flex min-h-12 items-center gap-2.5 px-5 py-3.5 text-sm font-bold"
                 >
                   <WhatsAppIcon />
                   {dict.hero.whatsapp}
-                </m.a>
+                </a>
               </m.div>
 
               {/* Orbit interaction hint — desktop only, aria-hidden */}

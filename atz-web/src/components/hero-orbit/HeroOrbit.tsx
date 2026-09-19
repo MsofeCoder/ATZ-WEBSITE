@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { AnimatePresence, motionValue, useMotionValueEvent, type MotionValue } from "motion/react";
 import type { Dict } from "@/dictionaries";
@@ -113,10 +113,34 @@ export default function HeroOrbit({
         el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%,-50%) scale(${p.scale})`;
         el.style.zIndex = String(p.z);
         el.style.opacity = String(p.opacity);
-        if (tip) {
-          tip.style.transform = `translate3d(${x}px, ${y - 48 * p.scale}px, 0) translate(-50%,-100%)`;
-        }
+        if (tip) placeTip(tip, x, y, p.scale);
       }
+    };
+
+    /**
+     * Tooltips are clamped to the stage so a body near an edge never pushes
+     * its card off-screen (on a 375px phone the nowrap card was half gone),
+     * and flipped underneath when there is no room above. The notch is
+     * shifted back by the clamp amount so it still points at the body.
+     * offsetWidth/Height are layout reads, but transforms don't dirty
+     * layout, so they cost nothing in the steady state.
+     */
+    const placeTip = (tip: HTMLElement, x: number, y: number, scale: number) => {
+      const stage = wrapRef.current;
+      const sw = stage?.clientWidth ?? 0;
+      const tw = tip.offsetWidth;
+      const th = tip.offsetHeight;
+      const margin = 8;
+      const half = tw / 2;
+      const cx =
+        sw > tw + margin * 2 ? Math.min(Math.max(x, half + margin), sw - half - margin) : x;
+      const gap = 44 * scale;
+      const below = y - gap - th < 0;
+      tip.classList.toggle("is-below", below);
+      tip.style.setProperty("--notch-x", `${(x - cx).toFixed(1)}px`);
+      tip.style.transform = below
+        ? `translate3d(${cx}px, ${y + gap}px, 0) translate(-50%, 0)`
+        : `translate3d(${cx}px, ${y - gap}px, 0) translate(-50%, -100%)`;
     };
 
     // The static layout supplies its own orbit ring; the WebGL scene draws
@@ -159,6 +183,52 @@ export default function HeroOrbit({
       planetRefs.current.get(key)?.classList.toggle("is-orbit-hot", visible);
     }
   };
+
+  /**
+   * Touch has no hover, so a finger never sees the label before committing.
+   * On a touch pointer the first tap shows the card and *arms* the body; a
+   * second tap on the same body opens it. Tapping anything else, or waiting
+   * four seconds, disarms. Mouse and pen open on the first click as before,
+   * and so does keyboard activation (a click event with no pointerType).
+   */
+  const armedRef = useRef<BodyId | null>(null);
+  const armTimerRef = useRef(0);
+  const disarm = useCallback(() => {
+    const prev = armedRef.current;
+    armedRef.current = null;
+    window.clearTimeout(armTimerRef.current);
+    if (prev) setTooltip(prev, false);
+  }, []);
+  const activate = useCallback(
+    (key: BodyId, pointerType: string | undefined) => {
+      if (pointerType === "touch" && armedRef.current !== key) {
+        disarm();
+        armedRef.current = key;
+        setTooltip(key, true);
+        armTimerRef.current = window.setTimeout(disarm, 4000);
+        return;
+      }
+      disarm();
+      openDrawer(key);
+    },
+    [disarm, openDrawer]
+  );
+  useEffect(() => {
+    const onDocDown = (e: PointerEvent) => {
+      if (!armedRef.current) return;
+      if ((e.target as Element | null)?.closest(".orbit-stage button")) return;
+      disarm();
+    };
+    document.addEventListener("pointerdown", onDocDown, { passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", onDocDown);
+      window.clearTimeout(armTimerRef.current);
+    };
+  }, [disarm]);
+  const activateRef = useRef(activate);
+  useEffect(() => {
+    activateRef.current = activate;
+  }, [activate]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -280,7 +350,7 @@ export default function HeroOrbit({
         }
 
         const hit = engine.hitTest();
-        if (hit) openDrawerRef.current(hit);
+        if (hit) activateRef.current(hit, e.pointerType);
       };
       const onStageEnter = () => engine.setStageHover(true);
       const onStageLeave = () => engine.setStageHover(false);
@@ -381,7 +451,7 @@ export default function HeroOrbit({
         <button
           ref={sunBtnRef}
           type="button"
-          onClick={() => openDrawer("sun")}
+          onClick={(e) => activate("sun", (e.nativeEvent as PointerEvent).pointerType)}
           onMouseEnter={() => setTooltip("sun", true)}
           onMouseLeave={() => setTooltip("sun", false)}
           onFocus={() => setTooltip("sun", true)}
@@ -409,59 +479,34 @@ export default function HeroOrbit({
           </span>
         </button>
 
-        {/* Sun Hover Reveal Card */}
+        {/* Sun hover / tap card */}
         <div
           ref={sunTipRef}
           aria-hidden="true"
-          className="pointer-events-none absolute top-0 left-0 z-[50] opacity-0 transition-opacity duration-300 will-change-transform"
-          style={{ transform: "translate3d(-200px,-200px,0)" }}
+          className="orb-tip"
+          style={
+            {
+              "--tip-accent": SUN.accentBright,
+              "--tip-glow": SUN.glow,
+            } as CSSProperties
+          }
         >
-          <div
-            className="flex items-center gap-3.5 rounded-2xl border border-white/20 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(14,23,48,0.95) 0%, rgba(8,14,32,0.98) 100%)",
-              boxShadow: "0 12px 32px rgba(0,0,0,0.6), 0 0 28px rgba(201,168,76,0.35)",
-            }}
-          >
-            <div className="border-gold/40 bg-gold/10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border p-1.5 shadow-md">
-              <Image
-                src={SUN.logo}
-                alt=""
-                width={38}
-                height={38}
-                className="h-full w-full object-contain"
-              />
+          <div className="orb-tip__card">
+            <div className="orb-tip__logo">
+              <Image src={SUN.logo} alt="" width={40} height={40} />
             </div>
-            <div className="flex flex-col text-left whitespace-nowrap">
-              <div className="flex items-center gap-2">
-                <span className="font-display text-sm font-extrabold tracking-wide text-white">
-                  {SUN.name}
-                </span>
-                <span className="bg-gold text-navy-deep rounded-full px-2 py-0.5 text-[0.62rem] font-bold tracking-wider uppercase shadow-sm">
-                  {dict.solar.parentBadge}
-                </span>
+            <div className="orb-tip__body">
+              <div className="orb-tip__row">
+                <span className="orb-tip__title">{SUN.name}</span>
+                <span className="orb-tip__tag orb-tip__tag--sun">{dict.solar.parentBadge}</span>
               </div>
-              <span className="text-gold-soft mt-0.5 flex items-center gap-1.5 text-[0.7rem] font-semibold opacity-95">
+              <span className="orb-tip__hint">
                 <span>{dict.solar.clickOverview}</span>
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                >
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
+                <ArrowGlyph />
               </span>
             </div>
           </div>
-          <div
-            className="mx-auto -mt-1.5 h-3 w-3 rotate-45 border-r border-b border-white/20"
-            style={{ background: "rgba(8,14,32,0.98)" }}
-          />
+          <div className="orb-tip__notch" />
         </div>
 
         {BRAND_LIST.map((brand) => {
@@ -481,7 +526,7 @@ export default function HeroOrbit({
                 transform: "translate3d(-200px,-200px,0)",
               }}
               aria-label={`${copy.title} — ${copy.tag} — ${dict.solar.openAria}`}
-              onClick={() => openDrawer(brand.id)}
+              onClick={(e) => activate(brand.id, (e.nativeEvent as PointerEvent).pointerType)}
               onMouseEnter={() => {
                 setTooltip(brand.id, true);
                 engineRef.current?.setPlanetPaused(brand.id, true);
@@ -535,7 +580,7 @@ export default function HeroOrbit({
           );
         })}
 
-        {/* Hover-Reveal Holographic Cards for each company */}
+        {/* Hover / tap cards for each company */}
         {BRAND_LIST.map((brand) => {
           const copy = dict.solar[brand.id];
           return (
@@ -546,70 +591,30 @@ export default function HeroOrbit({
                 if (el) tipRefs.current.set(brand.id, el);
                 else tipRefs.current.delete(brand.id);
               }}
-              className="pointer-events-none absolute top-0 left-0 z-50 opacity-0 transition-opacity duration-300 will-change-transform"
-              style={{ transform: "translate3d(-200px,-200px,0)" }}
+              className="orb-tip"
+              style={
+                {
+                  "--tip-accent": brand.accentBright,
+                  "--tip-glow": brand.glow,
+                } as CSSProperties
+              }
             >
-              <div
-                className="flex items-center gap-3.5 rounded-2xl border border-white/25 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(14,23,48,0.94) 0%, rgba(8,14,32,0.98) 100%)",
-                  boxShadow: `0 12px 32px rgba(0,0,0,0.6), 0 0 24px ${brand.glow}`,
-                }}
-              >
-                {/* Revealed Company Logo */}
-                <div
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-1.5 shadow-md"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02))",
-                    border: `1.5px solid ${brand.accentBright}`,
-                  }}
-                >
-                  <Image
-                    src={brand.logo}
-                    alt=""
-                    width={38}
-                    height={38}
-                    className="h-full w-full object-contain"
-                  />
+              <div className="orb-tip__card">
+                <div className="orb-tip__logo">
+                  <Image src={brand.logo} alt="" width={40} height={40} />
                 </div>
-
-                {/* Company Title & Specialty Tag */}
-                <div className="flex flex-col text-left whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span className="font-display text-sm font-extrabold tracking-wide text-white">
-                      {copy.title}
-                    </span>
-                    <span
-                      className="rounded-full px-2 py-0.5 text-[0.62rem] font-bold tracking-wider text-white uppercase shadow-sm"
-                      style={{ background: brand.accentBright }}
-                    >
-                      {copy.tag}
-                    </span>
+                <div className="orb-tip__body">
+                  <div className="orb-tip__row">
+                    <span className="orb-tip__title">{copy.title}</span>
+                    <span className="orb-tip__tag">{copy.tag}</span>
                   </div>
-                  <span className="text-gold-soft mt-0.5 flex items-center gap-1.5 text-[0.7rem] font-semibold opacity-95">
+                  <span className="orb-tip__hint">
                     <span>{dict.solar.clickExplore}</span>
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    >
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
+                    <ArrowGlyph />
                   </span>
                 </div>
               </div>
-
-              {/* Pointing notch */}
-              <div
-                className="mx-auto -mt-1.5 h-3 w-3 rotate-45 border-r border-b border-white/25"
-                style={{ background: "rgba(8,14,32,0.98)" }}
-              />
+              <div className="orb-tip__notch" />
             </div>
           );
         })}
@@ -644,3 +649,20 @@ export default function HeroOrbit({
  * the parent passes none, this inert one keeps the hook order stable.
  */
 const fallbackMotionValue = motionValue(0);
+
+function ArrowGlyph() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
+  );
+}
